@@ -1,0 +1,1826 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HERFORM — AI Fitness for Women</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<!-- Supabase SDK -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --black:#0A0A0A;--dark:#111111;--card:#161616;--card2:#1C1C1C;
+  --border:#242424;--white:#FFFFFF;--off:#E0E0E0;--muted:#666666;--faint:#2E2E2E;
+  --rose:#D4756A;--sage:#7A9E87;--amber:#C9955A;--lavender:#8B8EC7;--accent:#D4756A;
+  --sidebar-w:260px;--topbar-h:60px;
+}
+html,body{height:100%;font-family:'Outfit',sans-serif;-webkit-font-smoothing:antialiased;background:var(--black);color:var(--white);}
+body{overflow-x:hidden;}
+::-webkit-scrollbar{width:4px;}
+::-webkit-scrollbar-track{background:var(--dark);}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px;}
+
+/* ══ AUTH SCREENS ══ */
+.auth-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;background:var(--black);padding:20px;}
+.auth-card{width:100%;max-width:420px;background:var(--dark);border:1px solid var(--border);border-radius:20px;padding:40px 36px;}
+.auth-logo{font-size:15px;font-weight:700;letter-spacing:0.2em;text-transform:uppercase;color:var(--white);margin-bottom:32px;}
+.auth-title{font-size:26px;font-weight:700;letter-spacing:-0.02em;color:var(--white);margin-bottom:6px;}
+.auth-sub{font-size:14px;color:var(--muted);margin-bottom:28px;line-height:1.5;}
+.auth-input{width:100%;padding:13px 16px;background:var(--card);border:1px solid var(--border);border-radius:10px;font-family:'Outfit',sans-serif;font-size:14px;color:var(--white);outline:none;margin-bottom:12px;transition:border-color 0.2s;}
+.auth-input:focus{border-color:rgba(212,117,106,0.6);}
+.auth-input::placeholder{color:var(--faint);}
+.auth-btn{width:100%;padding:14px;background:var(--accent);color:white;font-family:'Outfit',sans-serif;font-size:14px;font-weight:600;border:none;border-radius:10px;cursor:pointer;transition:background 0.2s;margin-bottom:12px;}
+.auth-btn:hover{background:#c06257;}
+.auth-btn:disabled{background:var(--faint);cursor:not-allowed;}
+.auth-btn.secondary{background:var(--card);color:var(--off);border:1px solid var(--border);}
+.auth-btn.secondary:hover{border-color:var(--accent);color:var(--white);}
+.auth-divider{display:flex;align-items:center;gap:12px;margin:16px 0;}
+.auth-divider span{font-size:12px;color:var(--muted);}
+.auth-divider::before,.auth-divider::after{content:'';flex:1;height:1px;background:var(--border);}
+.auth-link{font-size:13px;color:var(--muted);text-align:center;margin-top:16px;}
+.auth-link a{color:var(--accent);cursor:pointer;text-decoration:none;font-weight:500;}
+.auth-link a:hover{text-decoration:underline;}
+.auth-msg{padding:12px 14px;border-radius:8px;font-size:13px;margin-bottom:14px;display:none;}
+.auth-msg.success{background:rgba(122,158,135,0.1);border:1px solid rgba(122,158,135,0.3);color:var(--sage);}
+.auth-msg.error{background:rgba(212,117,106,0.1);border:1px solid rgba(212,117,106,0.3);color:var(--rose);}
+.auth-msg.show{display:block;}
+
+/* ══ APP SHELL ══ */
+.app-shell{display:none;min-height:100vh;background:var(--black);}
+.app-shell.visible{display:flex;flex-direction:column;}
+
+/* Top bar */
+.topbar{height:var(--topbar-h);padding:0 24px;display:flex;align-items:center;justify-content:space-between;background:rgba(17,17,17,0.95);backdrop-filter:blur(16px);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:100;}
+.topbar-logo{font-size:14px;font-weight:700;letter-spacing:0.2em;text-transform:uppercase;color:var(--white);cursor:pointer;text-decoration:none;}
+.topbar-nav{display:flex;gap:4px;}
+.topbar-tab{padding:7px 16px;border-radius:8px;font-family:'Outfit',sans-serif;font-size:13px;font-weight:500;color:var(--muted);background:none;border:none;cursor:pointer;transition:all 0.2s;}
+.topbar-tab:hover{color:var(--white);}
+.topbar-tab.active{background:var(--card);color:var(--white);}
+.topbar-right{display:flex;align-items:center;gap:10px;}
+.topbar-user{font-size:13px;color:var(--muted);}
+.topbar-signout{font-size:12px;color:var(--muted);background:none;border:1px solid var(--border);padding:6px 12px;border-radius:7px;cursor:pointer;font-family:'Outfit',sans-serif;transition:all 0.2s;}
+.topbar-signout:hover{color:var(--rose);border-color:var(--rose);}
+/* User avatar in topbar */
+.topbar-avatar-wrap{position:relative;cursor:pointer;}
+.topbar-avatar{width:34px;height:34px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:white;border:2px solid transparent;transition:border-color 0.2s;}
+.topbar-avatar:hover{border-color:var(--accent);}
+.topbar-dropdown{position:absolute;top:calc(100% + 10px);right:0;background:var(--dark);border:1px solid var(--border);border-radius:12px;padding:4px;width:220px;z-index:200;box-shadow:0 8px 32px rgba(0,0,0,0.4);display:none;}
+.topbar-avatar-wrap:hover .topbar-dropdown{display:block;}
+.td-header{padding:12px 14px;border-bottom:1px solid var(--border);}
+.td-name{font-size:14px;font-weight:600;color:var(--white);margin-bottom:2px;}
+.td-email{font-size:12px;color:var(--muted);}
+.td-badge{display:inline-block;font-size:10px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;background:rgba(212,117,106,0.12);border:1px solid rgba(212,117,106,0.3);color:var(--accent);padding:2px 8px;border-radius:20px;margin-top:6px;}
+.td-row{display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:8px;cursor:pointer;transition:background 0.15s;font-size:13px;color:var(--off);width:100%;background:none;border:none;font-family:'Outfit',sans-serif;text-align:left;}
+.td-row:hover{background:rgba(255,255,255,0.05);}
+.td-row svg{width:15px;height:15px;stroke:var(--muted);fill:none;stroke-width:1.5;flex-shrink:0;}
+.td-row.danger{color:var(--rose);}
+.td-row.danger svg{stroke:var(--rose);}
+
+/* Mobile bottom nav */
+.mobile-nav{display:none;position:fixed;bottom:0;left:0;right:0;height:60px;background:rgba(17,17,17,0.97);backdrop-filter:blur(16px);border-top:1px solid var(--border);z-index:100;}
+.mobile-nav-inner{display:flex;height:100%;}
+.mob-tab{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;background:none;border:none;cursor:pointer;color:var(--faint);transition:color 0.2s;}
+.mob-tab.active{color:var(--accent);}
+.mob-tab svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.5;}
+.mob-tab span{font-size:10px;font-weight:500;}
+
+/* Main content area */
+.app-content{flex:1;padding:32px 24px;max-width:1100px;margin:0 auto;width:100%;}
+.app-content.with-mob-nav{padding-bottom:80px;}
+
+/* Screens */
+.view{display:none;}
+.view.active{display:block;animation:fadeIn 0.2s ease;}
+@keyframes fadeIn{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:translateY(0);}}
+
+/* ══ HOME VIEW ══ */
+.home-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px;}
+.home-hero-card{grid-column:1/-1;background:var(--black);border:1px solid var(--border);border-radius:16px;padding:28px 32px;position:relative;overflow:hidden;}
+.home-hero-card::before{content:'';position:absolute;top:-60px;right:-60px;width:300px;height:300px;border-radius:50%;background:radial-gradient(circle,rgba(212,117,106,0.08) 0%,transparent 70%);}
+.h-badge{display:inline-flex;align-items:center;gap:6px;background:rgba(212,117,106,0.1);border:1px solid rgba(212,117,106,0.25);padding:4px 12px;border-radius:20px;margin-bottom:14px;}
+.h-badge-dot{width:5px;height:5px;border-radius:50%;background:var(--accent);animation:blink 2s infinite;}
+@keyframes blink{0%,100%{opacity:1;}50%{opacity:0.3;}}
+.h-badge-text{font-size:11px;font-weight:500;color:var(--accent);letter-spacing:0.05em;}
+.home-title{font-size:clamp(24px,3vw,36px);font-weight:700;letter-spacing:-0.02em;color:var(--white);margin-bottom:4px;}
+.home-sub{font-size:16px;font-weight:300;font-style:italic;color:var(--off);margin-bottom:20px;}
+.home-stats-row{display:flex;gap:12px;flex-wrap:wrap;}
+.h-stat{background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:10px;padding:12px 18px;min-width:90px;}
+.h-stat-val{font-size:22px;font-weight:700;color:var(--white);line-height:1;}
+.h-stat-lbl{font-size:10px;font-weight:500;letter-spacing:0.1em;text-transform:uppercase;color:rgba(255,255,255,0.35);margin-top:3px;}
+
+/* Card base */
+.card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:20px;}
+.card-title{font-size:13px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--muted);margin-bottom:14px;}
+
+/* Phase card */
+.phase-card-web{background:var(--card);border:1px solid var(--border);border-radius:14px;overflow:hidden;cursor:pointer;transition:border-color 0.2s;}
+.phase-card-web:hover{border-color:var(--accent);}
+.phase-top{padding:16px 20px;display:flex;align-items:center;justify-content:space-between;}
+.phase-name-web{font-size:14px;font-weight:600;}
+.phase-day-web{font-size:32px;font-weight:700;}
+.phase-sub-web{font-size:12px;color:var(--muted);padding:0 20px 14px;}
+.phase-next-web{font-size:11px;padding:0 20px 14px;font-weight:500;}
+.phase-bar-web{height:4px;display:flex;}
+.phase-bar-web div{flex:1;}
+
+/* Workout card */
+.workout-card-web{background:var(--card);border:1px solid var(--border);border-radius:14px;overflow:hidden;cursor:pointer;transition:all 0.2s;}
+.workout-card-web:hover{border-color:var(--accent);transform:translateY(-2px);}
+.wc-inner{padding:20px;}
+.wc-goal-tag-web{font-size:10px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);margin-bottom:4px;}
+.wc-phase-tag-web{font-size:11px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;margin-bottom:8px;}
+.wc-title-web{font-size:18px;font-weight:700;color:var(--white);margin-bottom:14px;line-height:1.25;letter-spacing:-0.01em;}
+.wc-pills-web{display:flex;gap:8px;flex-wrap:wrap;}
+.wc-pill-web{display:flex;align-items:center;gap:5px;background:var(--card2);border:1px solid var(--border);border-radius:20px;padding:5px 12px;}
+.wc-pill-web svg{width:12px;height:12px;stroke:var(--muted);fill:none;stroke-width:1.5;}
+.wc-pill-web span{font-size:12px;color:var(--muted);}
+.wc-action-bar{padding:12px 20px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;background:rgba(255,255,255,0.02);}
+.wc-action-txt{font-size:12px;color:var(--muted);}
+.wc-action-btn{padding:7px 16px;background:var(--accent);color:white;border:none;border-radius:7px;font-family:'Outfit',sans-serif;font-size:12px;font-weight:600;cursor:pointer;transition:background 0.2s;}
+.wc-action-btn:hover{background:#c06257;}
+
+/* Progress card */
+.progress-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:20px;display:flex;align-items:center;gap:20px;}
+.ring-svg-web{width:72px;height:72px;flex-shrink:0;}
+.prog-info-web h3{font-size:15px;font-weight:600;color:var(--white);margin-bottom:4px;}
+.prog-info-web p{font-size:12px;color:var(--muted);line-height:1.5;}
+.log-btn-web{margin-left:auto;padding:9px 18px;background:var(--accent);color:white;border:none;border-radius:8px;font-family:'Outfit',sans-serif;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;transition:background 0.2s;flex-shrink:0;}
+.log-btn-web:hover{background:#c06257;}
+
+/* Period alert */
+.period-alert-web{background:rgba(212,117,106,0.08);border:1px solid rgba(212,117,106,0.25);border-radius:12px;padding:14px 18px;display:flex;align-items:center;gap:12px;margin-bottom:20px;}
+.period-alert-web .pa-text{flex:1;font-size:13px;color:var(--off);line-height:1.5;}
+.period-alert-web .pa-btn{padding:7px 14px;background:var(--accent);color:white;border:none;border-radius:7px;font-family:'Outfit',sans-serif;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;}
+
+/* ══ AI COACH VIEW ══ */
+.ai-layout{display:grid;grid-template-columns:1fr 360px;gap:20px;align-items:start;}
+.ai-left{display:flex;flex-direction:column;gap:16px;}
+.ai-right{display:flex;flex-direction:column;gap:16px;position:sticky;top:calc(var(--topbar-h) + 20px);}
+
+/* Plan card */
+.plan-card-web{background:var(--card);border:1px solid var(--border);border-radius:14px;overflow:hidden;}
+.plan-head{padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:10px;}
+.plan-title-web{font-size:14px;font-weight:700;color:var(--white);}
+.plan-badges{display:flex;gap:6px;flex-wrap:wrap;}
+.plan-badge-web{font-size:10px;font-weight:600;padding:3px 9px;border-radius:6px;letter-spacing:0.05em;text-transform:uppercase;}
+.plan-prog-bar{height:3px;background:var(--border);}
+.plan-prog-fill{height:100%;background:var(--sage);transition:width 0.3s ease;width:0%;}
+.plan-ex-row{padding:10px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px;cursor:pointer;transition:background 0.15s;-webkit-tap-highlight-color:transparent;}
+.plan-ex-row:last-child{border-bottom:none;}
+.plan-ex-row:hover{background:rgba(255,255,255,0.02);}
+.plan-ex-row.done .ex-name-web{color:var(--muted);text-decoration:line-through;}
+.ex-cb{width:22px;height:22px;border-radius:50%;border:2px solid var(--border);display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all 0.2s;}
+.ex-cb.checked{background:var(--sage);border-color:var(--sage);}
+.ex-cb svg{width:11px;height:11px;stroke:white;fill:none;stroke-width:2.5;opacity:0;transition:opacity 0.15s;}
+.ex-cb.checked svg{opacity:1;}
+.ex-name-web{font-size:13px;color:var(--off);flex:1;}
+.ex-sets-web{font-size:12px;color:var(--muted);font-weight:500;}
+.complete-btn{width:100%;padding:14px;background:var(--faint);color:var(--muted);font-family:'Outfit',sans-serif;font-size:14px;font-weight:600;border:none;cursor:not-allowed;transition:all 0.2s;}
+.complete-btn.ready{background:var(--sage);color:white;cursor:pointer;}
+.complete-btn.ready:hover{background:#6a8e77;}
+
+/* Streak row */
+.streak-row-web{display:flex;gap:10px;}
+.streak-card-web{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px;flex:1;text-align:center;}
+.streak-val-web{font-size:22px;font-weight:700;color:var(--white);}
+.streak-lbl-web{font-size:10px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--muted);margin-top:3px;}
+
+/* AI header card */
+.ai-header-card{background:var(--black);border:1px solid var(--border);border-radius:14px;padding:18px 20px;}
+.ai-status-row{display:flex;align-items:center;gap:8px;margin-bottom:4px;}
+.ai-pulse-web{width:7px;height:7px;border-radius:50%;background:#5EE87A;position:relative;flex-shrink:0;}
+.ai-pulse-web::after{content:'';position:absolute;inset:-3px;border-radius:50%;background:rgba(94,232,122,0.25);animation:pulse 2s infinite;}
+@keyframes pulse{0%,100%{transform:scale(1);opacity:1;}50%{transform:scale(1.6);opacity:0;}}
+.ai-name{font-size:18px;font-weight:700;color:var(--white);letter-spacing:-0.02em;}
+.ai-phase-sub{font-size:12px;color:var(--muted);}
+
+/* Chat */
+.chat-card{background:var(--card);border:1px solid var(--border);border-radius:14px;overflow:hidden;display:flex;flex-direction:column;}
+.chat-msgs{padding:14px;display:flex;flex-direction:column;gap:10px;max-height:340px;overflow-y:auto;min-height:120px;}
+.chat-msgs::-webkit-scrollbar{width:3px;}
+.chat-msgs::-webkit-scrollbar-thumb{background:var(--border);}
+.msg-web{max-width:85%;}
+.msg-ai-web{align-self:flex-start;}
+.msg-user-web{align-self:flex-end;}
+.msg-lbl-web{font-size:10px;color:var(--muted);margin-bottom:3px;font-weight:500;}
+.msg-user-web .msg-lbl-web{text-align:right;}
+.msg-bub-web{padding:10px 13px;border-radius:14px;font-size:13px;line-height:1.6;}
+.msg-ai-web .msg-bub-web{background:var(--card2);color:var(--off);border-bottom-left-radius:3px;border:1px solid var(--border);}
+.msg-user-web .msg-bub-web{background:var(--accent);color:white;border-bottom-right-radius:3px;}
+.typing-web{display:flex;gap:4px;padding:10px 13px;background:var(--card2);border:1px solid var(--border);border-radius:14px;border-bottom-left-radius:3px;width:fit-content;}
+.t-dot{width:5px;height:5px;border-radius:50%;background:var(--muted);animation:typing 1.2s infinite;}
+.t-dot:nth-child(2){animation-delay:.2s;}.t-dot:nth-child(3){animation-delay:.4s;}
+@keyframes typing{0%,60%,100%{transform:translateY(0);}30%{transform:translateY(-5px);}}
+.chat-chips-web{padding:8px 14px;display:flex;gap:6px;overflow-x:auto;border-top:1px solid var(--border);}
+.chat-chips-web::-webkit-scrollbar{display:none;}
+.chip-web{padding:6px 12px;border-radius:20px;background:var(--dark);border:1px solid var(--border);font-size:12px;color:var(--off);white-space:nowrap;cursor:pointer;font-family:'Outfit',sans-serif;flex-shrink:0;transition:all 0.15s;}
+.chip-web:hover{border-color:var(--accent);color:var(--accent);}
+.chat-input-row{display:flex;gap:8px;padding:10px 14px;border-top:1px solid var(--border);align-items:flex-end;}
+.chat-inp{flex:1;padding:10px 13px;background:var(--dark);border:1px solid var(--border);border-radius:10px;font-family:'Outfit',sans-serif;font-size:13px;color:var(--white);outline:none;resize:none;max-height:80px;line-height:1.5;}
+.chat-inp::placeholder{color:var(--faint);}
+.chat-inp:focus{border-color:rgba(212,117,106,0.4);}
+.chat-send-web{width:38px;height:38px;border-radius:50%;background:var(--accent);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.chat-send-web svg{width:14px;height:14px;stroke:white;fill:none;stroke-width:2;}
+
+/* Strava card */
+.strava-card-web{background:var(--card);border:1px solid var(--border);border-radius:14px;overflow:hidden;}
+.strava-head{padding:14px 16px;display:flex;align-items:center;justify-content:space-between;}
+.strava-logo-row{display:flex;align-items:center;gap:8px;}
+.strava-logo-dot{width:28px;height:28px;border-radius:50%;background:#FC4C02;display:flex;align-items:center;justify-content:center;font-size:13px;}
+.strava-name-web{font-size:13px;font-weight:600;color:var(--white);}
+.strava-sub-web{font-size:11px;color:var(--muted);}
+.strava-connect-btn{padding:7px 14px;background:rgba(252,76,2,0.15);border:1px solid rgba(252,76,2,0.3);color:#FC4C02;font-family:'Outfit',sans-serif;font-size:12px;font-weight:600;border-radius:7px;cursor:pointer;transition:all 0.2s;}
+.strava-connect-btn:hover{background:#FC4C02;color:white;}
+
+/* ══ CYCLE VIEW ══ */
+.cycle-layout{display:grid;grid-template-columns:1fr 1fr;gap:20px;}
+.cycle-wheel-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:24px;display:flex;flex-direction:column;align-items:center;}
+.cycle-info-card-web{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:20px;}
+.cic-label-web{font-size:10px;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;color:var(--muted);margin-bottom:14px;}
+.cic-row-web{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border);}
+.cic-row-web:last-child{border-bottom:none;}
+.cic-key-web{font-size:13px;color:var(--muted);}
+.cic-val-web{font-size:13px;font-weight:600;color:var(--white);}
+.log-period-btn-web{width:100%;padding:12px;background:rgba(212,117,106,0.1);border:1px solid rgba(212,117,106,0.3);border-radius:10px;font-family:'Outfit',sans-serif;font-size:13px;font-weight:600;color:var(--accent);cursor:pointer;margin-top:14px;transition:all 0.2s;}
+.log-period-btn-web:hover{background:var(--accent);color:white;}
+.phase-guide-grid{grid-column:1/-1;display:grid;grid-template-columns:repeat(4,1fr);gap:12px;}
+.phase-guide-card-web{border-radius:12px;padding:18px;border:1px solid transparent;}
+.pgc-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;}
+.pgc-name-web{font-size:12px;font-weight:700;letter-spacing:0.04em;}
+.pgc-days-web{font-size:11px;color:var(--muted);}
+.pgc-desc-web{font-size:12px;line-height:1.65;margin-bottom:10px;}
+.pgc-ex-web{font-size:10px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;}
+.pgc-m{background:rgba(212,117,106,0.07);border-color:rgba(212,117,106,0.2);}
+.pgc-f{background:rgba(122,158,135,0.08);border-color:rgba(122,158,135,0.3);}
+.pgc-o{background:rgba(201,149,90,0.07);border-color:rgba(201,149,90,0.2);}
+.pgc-l{background:rgba(139,142,199,0.07);border-color:rgba(139,142,199,0.2);}
+.cycle-history-card{grid-column:1/-1;background:var(--card);border:1px solid var(--border);border-radius:14px;padding:20px;}
+.hist-item{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border);}
+.hist-item:last-child{border-bottom:none;}
+.hist-date{font-size:13px;color:var(--white);font-weight:500;}
+.hist-len{font-size:12px;color:var(--muted);}
+.hist-del{background:none;border:none;color:var(--muted);font-size:18px;cursor:pointer;padding:0 4px;transition:color 0.2s;}
+.hist-del:hover{color:var(--rose);}
+.cycle-legend-web{display:flex;gap:16px;flex-wrap:wrap;margin-top:12px;}
+.leg-item-web{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--muted);}
+.leg-dot-web{width:8px;height:8px;border-radius:50%;}
+
+/* ══ PROFILE VIEW ══ */
+.profile-layout{display:grid;grid-template-columns:280px 1fr;gap:20px;align-items:start;}
+.profile-card{background:var(--card);border:1px solid var(--border);border-radius:14px;overflow:hidden;}
+.profile-header-web{background:var(--black);padding:28px 24px;text-align:center;border-bottom:1px solid var(--border);}
+.p-avatar-web{width:72px;height:72px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:700;color:white;margin:0 auto 12px;}
+.p-name-web{font-size:18px;font-weight:700;color:var(--white);letter-spacing:-0.01em;}
+.p-email-web{font-size:12px;color:var(--muted);margin-top:3px;}
+.p-stats-web{display:flex;border-top:1px solid var(--border);}
+.p-stat-web{flex:1;padding:14px 0;text-align:center;border-right:1px solid var(--border);}
+.p-stat-web:last-child{border-right:none;}
+.p-stat-num-web{font-size:20px;font-weight:700;color:var(--white);}
+.p-stat-lbl-web{font-size:9px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);margin-top:2px;}
+.p-rows{padding:8px 0;}
+.p-row-web{padding:12px 20px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;transition:background 0.15s;}
+.p-row-web:hover{background:rgba(255,255,255,0.03);}
+.p-row-left-web{display:flex;align-items:center;gap:12px;}
+.p-row-icon-web{width:32px;height:32px;border-radius:8px;border:1px solid var(--border);display:flex;align-items:center;justify-content:center;}
+.p-row-icon-web svg{width:15px;height:15px;stroke:var(--accent);fill:none;stroke-width:1.5;}
+.p-row-lbl-web{font-size:13px;color:var(--off);}
+.chev-web svg{width:14px;height:14px;stroke:var(--faint);fill:none;stroke-width:1.5;}
+.goal-display-card{background:var(--card);border:1px solid var(--accent);border-radius:14px;padding:20px;margin-bottom:16px;}
+.gdc-label{font-size:10px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--accent);margin-bottom:8px;}
+.gdc-goal{font-size:17px;font-weight:700;color:var(--white);margin-bottom:3px;}
+.gdc-detail{font-size:13px;color:var(--muted);}
+.quote-card-web{background:var(--card);border:1px solid var(--border);border-left:2px solid var(--accent);border-radius:12px;padding:18px;}
+.qc-label{font-size:10px;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;color:var(--accent);margin-bottom:8px;}
+.qc-text{font-size:15px;font-weight:300;font-style:italic;color:var(--off);line-height:1.65;margin-bottom:10px;}
+.qc-name{font-size:13px;font-weight:600;color:var(--white);}
+.qc-sub{font-size:11px;color:var(--muted);}
+
+/* ══ MODAL ══ */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.8);z-index:500;display:flex;align-items:flex-end;justify-content:center;animation:mfadeIn 0.2s ease;}
+.modal-overlay.hidden{display:none;}
+@keyframes mfadeIn{from{opacity:0;}to{opacity:1;}}
+.modal-sheet-web{background:var(--dark);border-radius:24px 24px 0 0;border-top:1px solid var(--border);padding:24px 24px 40px;width:100%;max-width:540px;max-height:88vh;overflow-y:auto;animation:mslideUp 0.3s ease;}
+.modal-sheet-web::-webkit-scrollbar{display:none;}
+@keyframes mslideUp{from{transform:translateY(60px);opacity:0;}to{transform:translateY(0);opacity:1;}}
+.modal-handle-web{width:36px;height:4px;border-radius:2px;background:var(--border);margin:0 auto 20px;}
+.modal-progress-web{display:flex;gap:4px;margin-bottom:18px;}
+.mp-dot-web{flex:1;height:3px;border-radius:2px;background:var(--border);}
+.mp-dot-web.done{background:var(--accent);}
+.modal-title-web{font-size:20px;font-weight:700;color:var(--white);letter-spacing:-0.02em;margin-bottom:4px;}
+.modal-sub-web{font-size:13px;color:var(--muted);margin-bottom:18px;line-height:1.5;}
+.modal-step-web{display:none;}
+.modal-step-web.active{display:block;}
+.modal-q-web{font-size:13px;font-weight:600;color:var(--white);margin-bottom:10px;}
+.goal-grid-web{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;}
+.goal-btn-web{padding:12px 10px;background:var(--card);border:1px solid var(--border);border-radius:10px;font-family:'Outfit',sans-serif;font-size:12px;font-weight:500;color:var(--off);cursor:pointer;text-align:left;display:flex;align-items:center;gap:8px;transition:all 0.15s;line-height:1.3;}
+.goal-btn-web.selected,.goal-btn-web:active{background:rgba(212,117,106,0.12);border-color:var(--accent);color:var(--white);}
+.goal-icon-web{font-size:16px;flex-shrink:0;}
+.level-row-web{display:flex;gap:8px;margin-bottom:12px;}
+.level-btn-web{flex:1;padding:10px 4px;background:var(--card);border:1px solid var(--border);border-radius:10px;font-family:'Outfit',sans-serif;font-size:12px;font-weight:500;color:var(--muted);cursor:pointer;text-align:center;transition:all 0.15s;}
+.level-btn-web.selected{background:rgba(212,117,106,0.12);border-color:var(--accent);color:var(--white);}
+.modal-input-web{width:100%;padding:12px 14px;background:var(--card);border:1px solid var(--border);border-radius:10px;font-family:'Outfit',sans-serif;font-size:14px;color:var(--white);outline:none;margin-bottom:12px;}
+.modal-input-web::placeholder{color:#3a3a3a;}
+.modal-input-web:focus{border-color:rgba(212,117,106,0.5);}
+.modal-input-web[type=date]{color-scheme:dark;}
+.modal-next-web{width:100%;padding:13px;background:var(--accent);color:white;font-family:'Outfit',sans-serif;font-size:14px;font-weight:600;border:none;border-radius:10px;cursor:pointer;margin-bottom:10px;}
+.modal-next-web:hover{background:#c06257;}
+.modal-back-web{background:none;border:none;color:var(--muted);font-family:'Outfit',sans-serif;font-size:13px;cursor:pointer;display:block;text-align:center;width:100%;}
+.cl-row{display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap;}
+.cl-btn-web{padding:8px 12px;background:var(--card);border:1px solid var(--border);border-radius:8px;font-family:'Outfit',sans-serif;font-size:12px;font-weight:500;color:var(--muted);cursor:pointer;transition:all 0.15s;}
+.cl-btn-web.selected{background:rgba(212,117,106,0.12);border-color:var(--accent);color:var(--white);}
+
+/* ══ CELEBRATION ══ */
+.cel-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.93);z-index:600;display:flex;flex-direction:column;align-items:center;justify-content:center;animation:cfadeIn 0.3s ease;}
+.cel-overlay.hidden{display:none;}
+@keyframes cfadeIn{from{opacity:0;}to{opacity:1;}}
+canvas#confetti-canvas{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;}
+.cel-content{position:relative;z-index:1;text-align:center;max-width:340px;padding:20px;}
+.cel-emoji{font-size:64px;margin-bottom:16px;display:block;animation:bounce 0.6s ease;}
+@keyframes bounce{0%,100%{transform:scale(1);}50%{transform:scale(1.2);}}
+.cel-title{font-size:28px;font-weight:700;color:var(--white);letter-spacing:-0.02em;margin-bottom:8px;}
+.cel-sub{font-size:15px;color:var(--off);line-height:1.6;margin-bottom:24px;}
+.cel-stats{display:flex;gap:12px;justify-content:center;margin-bottom:28px;}
+.cel-stat{background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:10px;padding:14px 20px;text-align:center;}
+.cel-stat-val{font-size:24px;font-weight:700;color:var(--white);}
+.cel-stat-lbl{font-size:10px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:rgba(255,255,255,0.4);margin-top:3px;}
+.cel-btn{padding:13px 28px;border:none;border-radius:10px;font-family:'Outfit',sans-serif;font-size:14px;font-weight:600;cursor:pointer;transition:background 0.2s;margin:0 6px;}
+
+/* ══ ACTIVITY LOG MODAL ══ */
+.act-grid-web{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px;}
+.act-btn-web{padding:12px 8px;background:var(--card);border:1px solid var(--border);border-radius:10px;font-family:'Outfit',sans-serif;font-size:11px;font-weight:500;color:var(--muted);cursor:pointer;text-align:center;display:flex;flex-direction:column;align-items:center;gap:5px;transition:all 0.15s;}
+.act-btn-web.selected{background:rgba(212,117,106,0.12);border-color:var(--accent);color:var(--white);}
+.act-icon-web{font-size:20px;}
+.dur-row-web{display:flex;gap:6px;margin-bottom:12px;}
+.dur-btn-web{flex:1;padding:9px 0;background:var(--card);border:1px solid var(--border);border-radius:8px;font-family:'Outfit',sans-serif;font-size:12px;font-weight:500;color:var(--muted);cursor:pointer;text-align:center;transition:all 0.15s;}
+.dur-btn-web.selected{background:rgba(212,117,106,0.12);border-color:var(--accent);color:var(--white);}
+.effort-row-web{display:flex;gap:6px;margin-bottom:14px;}
+.effort-btn-web{flex:1;padding:10px 0;background:var(--card);border:1px solid var(--border);border-radius:8px;font-family:'Outfit',sans-serif;font-size:20px;cursor:pointer;text-align:center;transition:all 0.15s;}
+.effort-btn-web.selected{border-color:var(--accent);transform:scale(1.08);}
+.log-note-web{width:100%;padding:10px 13px;background:var(--card);border:1px solid var(--border);border-radius:10px;font-family:'Outfit',sans-serif;font-size:13px;color:var(--white);outline:none;resize:none;height:60px;margin-bottom:12px;}
+.log-note-web:focus{border-color:rgba(212,117,106,0.4);}
+.log-note-web::placeholder{color:#3a3a3a;}
+
+/* ══ TOAST ══ */
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--card2);color:var(--off);border:1px solid var(--border);padding:10px 20px;border-radius:20px;font-size:13px;font-weight:500;z-index:700;white-space:nowrap;animation:toastIn 0.25s ease;pointer-events:none;}
+@keyframes toastIn{from{opacity:0;transform:translateX(-50%) translateY(10px);}to{opacity:1;transform:translateX(-50%) translateY(0);}}
+
+/* ══ RESPONSIVE ══ */
+@media(max-width:900px){
+  .home-grid{grid-template-columns:1fr;}
+  .ai-layout{grid-template-columns:1fr;}
+  .ai-right{position:static;}
+  .cycle-layout{grid-template-columns:1fr;}
+  .cycle-wheel-card{flex-direction:row;gap:24px;align-items:flex-start;}
+  .phase-guide-grid{grid-template-columns:1fr 1fr;}
+  .profile-layout{grid-template-columns:1fr;}
+}
+@media(max-width:600px){
+  .topbar-nav{display:none;}
+  .mobile-nav{display:block;}
+  .app-content{padding:16px 14px;padding-bottom:80px;}
+  .phase-guide-grid{grid-template-columns:1fr;}
+  .home-stats-row{gap:8px;}
+  .h-stat{padding:10px 14px;}
+  .streak-row-web{gap:8px;}
+  .auth-card{padding:28px 22px;}
+  .ai-layout{gap:14px;}
+  .cycle-layout{gap:14px;}
+}
+</style>
+</head>
+<body>
+
+<!-- ══ AUTH: SIGN IN ══ -->
+<div id="view-signin" class="auth-wrap">
+  <div class="auth-card">
+    <div class="auth-logo">HERFORM</div>
+    <div class="auth-title">Welcome back</div>
+    <div class="auth-sub">Sign in to your account to continue your training.</div>
+    <div class="auth-msg" id="signin-msg"></div>
+    <input class="auth-input" type="email" id="signin-email" placeholder="Email address" autocomplete="email">
+    <input class="auth-input" type="password" id="signin-pw" placeholder="Password" autocomplete="current-password">
+    <button class="auth-btn" onclick="signIn()">Sign In →</button>
+    <button class="auth-btn secondary" onclick="sendMagicLink()">✉️ Send Magic Link (no password)</button>
+    <div class="auth-link">Don't have an account? <a onclick="showView('view-signup')">Create one</a></div>
+    <div class="auth-link" style="margin-top:8px;"><a onclick="showView('view-forgot')">Forgot password?</a></div>
+  </div>
+</div>
+
+<!-- ══ AUTH: SIGN UP ══ -->
+<div id="view-signup" class="auth-wrap" style="display:none;">
+  <div class="auth-card">
+    <div class="auth-logo">HERFORM</div>
+    <div class="auth-title">Create your account</div>
+    <div class="auth-sub">Free during beta. Your progress is saved across all your devices.</div>
+    <div class="auth-msg" id="signup-msg"></div>
+    <input class="auth-input" type="text" id="signup-name" placeholder="Your first name" autocomplete="given-name">
+    <input class="auth-input" type="email" id="signup-email" placeholder="Email address" autocomplete="email">
+    <input class="auth-input" type="password" id="signup-pw" placeholder="Password (min 6 characters)" autocomplete="new-password">
+    <button class="auth-btn" onclick="signUp()">Create Account →</button>
+    <div class="auth-link">Already have an account? <a onclick="showView('view-signin')">Sign in</a></div>
+  </div>
+</div>
+
+<!-- ══ AUTH: FORGOT / MAGIC LINK ══ -->
+<div id="view-forgot" class="auth-wrap" style="display:none;">
+  <div class="auth-card">
+    <div class="auth-logo">HERFORM</div>
+    <div class="auth-title">Reset password</div>
+    <div class="auth-sub">We'll send a magic link to your email. Click it to sign in instantly — no password needed.</div>
+    <div class="auth-msg" id="forgot-msg"></div>
+    <input class="auth-input" type="email" id="forgot-email" placeholder="Your email address">
+    <button class="auth-btn" onclick="sendMagicLink('forgot')">Send Magic Link →</button>
+    <div class="auth-link"><a onclick="showView('view-signin')">← Back to sign in</a></div>
+  </div>
+</div>
+
+<!-- ══ APP SHELL ══ -->
+<div id="app-shell" class="app-shell">
+
+  <!-- Top bar (desktop) -->
+  <div class="topbar">
+    <a class="topbar-logo" onclick="switchView('home')">HERFORM</a>
+    <div class="topbar-nav">
+      <button class="topbar-tab active" id="ttab-home" onclick="switchView('home')">Home</button>
+      <button class="topbar-tab" id="ttab-ai" onclick="switchView('ai')">AI Coach</button>
+      <button class="topbar-tab" id="ttab-cycle" onclick="switchView('cycle')">Cycle</button>
+      <button class="topbar-tab" id="ttab-profile" onclick="switchView('profile')">Profile</button>
+    </div>
+    <div class="topbar-right">
+      <div class="topbar-avatar-wrap">
+        <div class="topbar-avatar" id="topbar-avatar">?</div>
+        <div class="topbar-dropdown">
+          <div class="td-header">
+            <div class="td-name" id="td-name">—</div>
+            <div class="td-email" id="td-email">—</div>
+            <div class="td-badge">Beta Member</div>
+          </div>
+          <button class="td-row" onclick="switchView('profile')">
+            <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            My Profile
+          </button>
+          <button class="td-row" onclick="openResetPassword()">
+            <svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+            Reset Password
+          </button>
+          <button class="td-row danger" onclick="signOut()">
+            <svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+            Sign Out
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main content -->
+  <div class="app-content" id="app-content">
+
+    <!-- HOME -->
+    <div class="view active" id="view-home">
+      <div id="period-alert-wrap-web"></div>
+      <div class="home-grid">
+        <!-- Hero -->
+        <div class="home-hero-card">
+          <div class="h-badge"><div class="h-badge-dot"></div><span class="h-badge-text" id="home-badge">Loading…</span></div>
+          <div class="home-title">Train smarter.</div>
+          <div class="home-sub">Live in sync.</div>
+          <div class="home-stats-row">
+            <div class="h-stat"><div class="h-stat-val" id="home-sessions">0</div><div class="h-stat-lbl">Sessions</div></div>
+            <div class="h-stat"><div class="h-stat-val" id="home-cycleday">—</div><div class="h-stat-lbl">Cycle Day</div></div>
+            <div class="h-stat"><div class="h-stat-val" id="home-streak">0</div><div class="h-stat-lbl">Streak</div></div>
+            <div class="h-stat"><div class="h-stat-val" id="home-skipped">0</div><div class="h-stat-lbl">Skipped</div></div>
+          </div>
+        </div>
+        <!-- Phase strip -->
+        <div class="phase-card-web" onclick="switchView('cycle')">
+          <div class="phase-top">
+            <div>
+              <div class="phase-name-web" id="ps-phase-web" style="color:var(--sage);">— Phase</div>
+              <div style="font-size:12px;color:var(--muted);margin-top:2px;" id="ps-sub-web">Set up your cycle</div>
+            </div>
+            <div style="text-align:right;">
+              <div class="phase-day-web" id="ps-day-web" style="color:var(--sage);">—</div>
+              <div class="phase-next-web" id="ps-next-web" style="color:var(--muted);font-size:11px;"></div>
+            </div>
+          </div>
+          <div class="phase-bar-web" id="phase-bar-web">
+            <div style="background:var(--rose);"></div>
+            <div style="background:var(--sage);flex:2;"></div>
+            <div style="background:var(--amber);"></div>
+            <div style="background:var(--lavender);flex:2;"></div>
+          </div>
+        </div>
+        <!-- Today workout -->
+        <div class="workout-card-web" onclick="switchView('ai')">
+          <div class="wc-inner">
+            <div class="wc-goal-tag-web" id="wc-goal-tag-web">YOUR GOAL</div>
+            <div class="wc-phase-tag-web" id="wc-phase-tag-web" style="color:var(--sage);">Cycle Phase</div>
+            <div class="wc-title-web" id="hw-title-web">Set up your profile to unlock your plan</div>
+            <div class="wc-pills-web">
+              <div class="wc-pill-web"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg><span id="wc-duration-web">— min</span></div>
+              <div class="wc-pill-web"><svg viewBox="0 0 24 24"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg><span id="wc-intensity-web">—</span></div>
+            </div>
+          </div>
+          <div class="wc-action-bar">
+            <span class="wc-action-txt">Tap to view full workout & check off exercises</span>
+            <button class="wc-action-btn">Open →</button>
+          </div>
+        </div>
+        <!-- Progress -->
+        <div class="progress-card">
+          <svg class="ring-svg-web" viewBox="0 0 72 72">
+            <circle cx="36" cy="36" r="28" fill="none" stroke="#222" stroke-width="7"/>
+            <circle id="ring-arc-web" cx="36" cy="36" r="28" fill="none" stroke="var(--accent)" stroke-width="7" stroke-dasharray="175.9" stroke-dashoffset="44" stroke-linecap="round" transform="rotate(-90 36 36)"/>
+            <text x="36" y="36" text-anchor="middle" dominant-baseline="middle" font-size="12" font-weight="700" fill="white" font-family="Outfit,sans-serif" id="ring-pct-web">0%</text>
+          </svg>
+          <div class="prog-info-web">
+            <h3 id="prog-title-web">0 of 3 sessions done</h3>
+            <p id="prog-sub-web">Complete your setup to get started.</p>
+          </div>
+          <button class="log-btn-web" onclick="openActivityLog()">+ Log Activity</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- AI COACH -->
+    <div class="view" id="view-ai">
+      <div class="ai-layout">
+        <div class="ai-left">
+          <!-- Plan card with checklist -->
+          <div id="plan-section-web" style="display:none;">
+            <div class="plan-card-web">
+              <div class="plan-head">
+                <div class="plan-title-web" id="plan-title-web">Loading plan…</div>
+                <div class="plan-badges" id="plan-badges-web"></div>
+              </div>
+              <div class="plan-prog-bar"><div class="plan-prog-fill" id="plan-prog-fill-web"></div></div>
+              <div id="plan-exercises-web"></div>
+              <button class="complete-btn" id="complete-btn-web" onclick="onCompleteSession()">✓ Mark Session Complete (0/0)</button>
+            </div>
+          </div>
+          <!-- Streak -->
+          <div class="streak-row-web" id="streak-row-web" style="display:none;">
+            <div class="streak-card-web"><div class="streak-val-web" id="sv-streak-web">0</div><div class="streak-lbl-web">Streak</div></div>
+            <div class="streak-card-web"><div class="streak-val-web" id="sv-sessions-web">0</div><div class="streak-lbl-web">Sessions</div></div>
+            <div class="streak-card-web"><div class="streak-val-web" id="sv-skipped-web">0</div><div class="streak-lbl-web">Skipped</div></div>
+          </div>
+          <!-- Strava -->
+          <div class="strava-card-web">
+            <div class="strava-head">
+              <div class="strava-logo-row">
+                <div class="strava-logo-dot">🟠</div>
+                <div>
+                  <div class="strava-name-web">Strava</div>
+                  <div class="strava-sub-web" id="strava-sub-web">Auto-sync your workouts</div>
+                </div>
+              </div>
+              <button class="strava-connect-btn" id="strava-btn-web" onclick="stravaConnect()">Connect</button>
+            </div>
+            <div id="strava-activities-web" style="display:none;padding:0 16px 14px;"></div>
+          </div>
+          <!-- Log activity -->
+          <button onclick="openActivityLog()" style="width:100%;padding:13px;background:var(--card);border:1px solid var(--border);border-radius:12px;font-family:'Outfit',sans-serif;font-size:14px;font-weight:600;color:var(--off);cursor:pointer;transition:all 0.2s;" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">
+            + Log Activity Manually
+          </button>
+        </div>
+        <div class="ai-right">
+          <!-- AI header -->
+          <div class="ai-header-card">
+            <div class="ai-status-row">
+              <div class="ai-pulse-web"></div>
+              <div class="ai-name">AI Coach</div>
+              <button onclick="resetAll()" style="margin-left:auto;font-size:11px;color:var(--muted);background:none;border:none;cursor:pointer;font-family:'Outfit',sans-serif;">Reset</button>
+            </div>
+            <div class="ai-phase-sub" id="ai-sub-web">Set up your profile to begin</div>
+          </div>
+          <!-- Chat -->
+          <div class="chat-card">
+            <div class="chat-msgs" id="chat-msgs-web"></div>
+            <div class="chat-chips-web">
+              <div class="chip-web" onclick="sendChipWeb(this)">Today's full workout</div>
+              <div class="chip-web" onclick="sendChipWeb(this)">I skipped yesterday</div>
+              <div class="chip-web" onclick="sendChipWeb(this)">I'm tired</div>
+              <div class="chip-web" onclick="sendChipWeb(this)">Make it harder</div>
+              <div class="chip-web" onclick="sendChipWeb(this)">Nutrition tips</div>
+            </div>
+            <div class="chat-input-row">
+              <textarea class="chat-inp" id="chat-inp-web" rows="1" placeholder="Ask your AI coach…" onkeydown="handleKeyWeb(event)" oninput="autoResizeWeb(this)"></textarea>
+              <button class="chat-send-web" onclick="sendMsgWeb()"><svg viewBox="0 0 24 24"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg></button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CYCLE -->
+    <div class="view" id="view-cycle">
+      <div class="cycle-layout">
+        <div class="cycle-wheel-card">
+          <svg style="width:200px;height:200px;" viewBox="0 0 200 200" id="cycle-svg-web"></svg>
+          <div>
+            <div class="cycle-legend-web">
+              <div class="leg-item-web"><div class="leg-dot-web" style="background:var(--rose)"></div>Menstrual</div>
+              <div class="leg-item-web"><div class="leg-dot-web" style="background:var(--sage)"></div>Follicular</div>
+              <div class="leg-item-web"><div class="leg-dot-web" style="background:var(--amber)"></div>Ovulation</div>
+              <div class="leg-item-web"><div class="leg-dot-web" style="background:var(--lavender)"></div>Luteal</div>
+            </div>
+          </div>
+        </div>
+        <div class="cycle-info-card-web">
+          <div class="cic-label-web">Your Cycle</div>
+          <div class="cic-row-web"><span class="cic-key-web">Current phase</span><span class="cic-val-web" id="ci-phase-web">—</span></div>
+          <div class="cic-row-web"><span class="cic-key-web">Cycle day</span><span class="cic-val-web" id="ci-day-web">—</span></div>
+          <div class="cic-row-web"><span class="cic-key-web">Avg cycle length</span><span class="cic-val-web" id="ci-length-web">—</span></div>
+          <div class="cic-row-web"><span class="cic-key-web">Next period (predicted)</span><span class="cic-val-web" id="ci-next-web">—</span></div>
+          <div class="cic-row-web"><span class="cic-key-web">Periods logged</span><span class="cic-val-web" id="ci-logged-web">0</span></div>
+          <button class="log-period-btn-web" onclick="openPeriodCalendar()">🔴 Log Period Start</button>
+        </div>
+        <div class="phase-guide-grid">
+          <div class="phase-guide-card-web pgc-m">
+            <div class="pgc-top"><div class="pgc-name-web" style="color:var(--rose);">🔴 Menstrual</div><div class="pgc-days-web">Days 1–5</div></div>
+            <div class="pgc-desc-web" style="color:#c49090;">Rest, restore, nourish. Inflammation is higher — honour your body's need for recovery.</div>
+            <div class="pgc-ex-web" style="color:var(--rose);">✦ Yoga · Walking · Rest</div>
+          </div>
+          <div class="phase-guide-card-web pgc-f" id="pgc-follicular">
+            <div class="pgc-top"><div class="pgc-name-web" style="color:var(--sage);">🌿 Follicular</div><div class="pgc-days-web">Days 6–13</div></div>
+            <div class="pgc-desc-web" style="color:#96bca7;">Rising estrogen = rising energy. Ideal for high-intensity training and heavy lifting.</div>
+            <div class="pgc-ex-web" style="color:var(--sage);">✦ HIIT · Heavy lifting · Running</div>
+          </div>
+          <div class="phase-guide-card-web pgc-o">
+            <div class="pgc-top"><div class="pgc-name-web" style="color:var(--amber);">🌸 Ovulation</div><div class="pgc-days-web">Days 14–16</div></div>
+            <div class="pgc-desc-web" style="color:#c8a882;">Peak estrogen = peak performance. Push your personal records.</div>
+            <div class="pgc-ex-web" style="color:var(--amber);">✦ Max strength · Power</div>
+          </div>
+          <div class="phase-guide-card-web pgc-l">
+            <div class="pgc-top"><div class="pgc-name-web" style="color:var(--lavender);">🌙 Luteal</div><div class="pgc-days-web">Days 17+</div></div>
+            <div class="pgc-desc-web" style="color:#a4a6d4;">Progesterone rises. Stays here until you log your next period.</div>
+            <div class="pgc-ex-web" style="color:var(--lavender);">✦ Pilates · Moderate strength</div>
+          </div>
+        </div>
+        <div class="cycle-history-card">
+          <div class="cic-label-web">Period History</div>
+          <div id="cycle-history-web"><div style="font-size:13px;color:var(--muted);">No periods logged yet.</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PROFILE -->
+    <div class="view" id="view-profile">
+      <div class="profile-layout">
+        <div>
+          <div class="profile-card" style="margin-bottom:16px;">
+            <div class="profile-header-web">
+              <div class="p-avatar-web" id="p-avatar-web">?</div>
+              <div class="p-name-web" id="p-name-web">—</div>
+              <div class="p-email-web" id="p-email-web">—</div>
+            </div>
+            <div class="p-stats-web">
+              <div class="p-stat-web"><div class="p-stat-num-web" id="ps-sessions-web">0</div><div class="p-stat-lbl-web">Sessions</div></div>
+              <div class="p-stat-web"><div class="p-stat-num-web" id="ps-cycleday-web">—</div><div class="p-stat-lbl-web">Cycle Day</div></div>
+              <div class="p-stat-web"><div class="p-stat-num-web" id="ps-streak-web">0</div><div class="p-stat-lbl-web">Streak</div></div>
+            </div>
+            <div class="p-rows">
+              <div class="p-row-web" onclick="openModal('goal')"><div class="p-row-left-web"><div class="p-row-icon-web"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg></div><span class="p-row-lbl-web">Edit Goal & Activity</span></div><div class="chev-web"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></div></div>
+              <div class="p-row-web" onclick="switchView('cycle')"><div class="p-row-left-web"><div class="p-row-icon-web"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg></div><span class="p-row-lbl-web">Cycle Tracker</span></div><div class="chev-web"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></div></div>
+              <div class="p-row-web" onclick="resetAll()"><div class="p-row-left-web"><div class="p-row-icon-web"><svg viewBox="0 0 24 24"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.51"/></svg></div><span class="p-row-lbl-web">Reset Profile</span></div><div class="chev-web"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></div></div>
+              <div class="p-row-web" onclick="signOut()"><div class="p-row-left-web"><div class="p-row-icon-web"><svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg></div><span class="p-row-lbl-web">Sign Out</span></div><div class="chev-web"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></div></div>
+            </div>
+          </div>
+        </div>
+        <div>
+          <div class="goal-display-card" id="goal-display-card" style="display:none;">
+            <div class="gdc-label">Your Goal</div>
+            <div class="gdc-goal" id="gdc-goal-web">—</div>
+            <div class="gdc-detail" id="gdc-detail-web">—</div>
+          </div>
+          <div class="quote-card-web">
+            <div class="qc-label">Our Philosophy</div>
+            <div class="qc-text">"HERFORM exists because women deserve fitness built for them — not adapted from systems designed for men."</div>
+            <div class="qc-name">Lego Xiong</div>
+            <div class="qc-sub">Founder & Head Coach</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- app-content -->
+
+  <!-- Mobile bottom nav -->
+  <div class="mobile-nav">
+    <div class="mobile-nav-inner">
+      <button class="mob-tab active" id="mtab-home" onclick="switchView('home')"><svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg><span>Home</span></button>
+      <button class="mob-tab" id="mtab-ai" onclick="switchView('ai')"><svg viewBox="0 0 24 24"><path d="M12 2a10 10 0 1 0 10 10"/><path d="M12 8v4l3 3"/><circle cx="18" cy="6" r="3" fill="currentColor" stroke="none"/></svg><span>AI Coach</span></button>
+      <button class="mob-tab" id="mtab-cycle" onclick="switchView('cycle')"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg><span>Cycle</span></button>
+      <button class="mob-tab" id="mtab-profile" onclick="switchView('profile')"><svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg><span>Profile</span></button>
+    </div>
+  </div>
+
+</div><!-- app-shell -->
+
+<!-- ONBOARDING MODAL -->
+<div class="modal-overlay hidden" id="onboarding-modal">
+  <div class="modal-sheet-web">
+    <div class="modal-handle-web"></div>
+    <div class="modal-progress-web" id="modal-dots-web"></div>
+    <div class="modal-step-web active" id="ms-goal-web">
+      <div class="modal-title-web">What's your main goal?</div>
+      <div class="modal-sub-web">Everything — workouts, nutrition, AI coaching — is built around this.</div>
+      <div class="goal-grid-web">
+        <button class="goal-btn-web" onclick="pick('goal','Lose weight & tone',this)"><span class="goal-icon-web">🔥</span>Lose weight & tone</button>
+        <button class="goal-btn-web" onclick="pick('goal','Build muscle & strength',this)"><span class="goal-icon-web">💪</span>Build muscle</button>
+        <button class="goal-btn-web" onclick="pick('goal','Running & cardio',this)"><span class="goal-icon-web">🏃‍♀️</span>Running & cardio</button>
+        <button class="goal-btn-web" onclick="pick('goal','Train for a sport',this)"><span class="goal-icon-web">🏸</span>Train for a sport</button>
+        <button class="goal-btn-web" onclick="pick('goal','Yoga & flexibility',this)"><span class="goal-icon-web">🧘‍♀️</span>Yoga & flexibility</button>
+        <button class="goal-btn-web" onclick="pick('goal','General health',this)"><span class="goal-icon-web">✨</span>General health</button>
+      </div>
+      <button class="modal-next-web" onclick="modalNext()">Continue →</button>
+    </div>
+    <div class="modal-step-web" id="ms-activity-web">
+      <div class="modal-title-web">Specific sport or activity?</div>
+      <div class="modal-sub-web">Optional — makes workouts even more specific to you.</div>
+      <div class="goal-grid-web">
+        <button class="goal-btn-web" onclick="pick('activity','Badminton',this)"><span class="goal-icon-web">🏸</span>Badminton</button>
+        <button class="goal-btn-web" onclick="pick('activity','Running',this)"><span class="goal-icon-web">🏃‍♀️</span>Running</button>
+        <button class="goal-btn-web" onclick="pick('activity','Padel',this)"><span class="goal-icon-web">🎾</span>Padel</button>
+        <button class="goal-btn-web" onclick="pick('activity','Hiking',this)"><span class="goal-icon-web">🧗‍♀️</span>Hiking</button>
+        <button class="goal-btn-web" onclick="pick('activity','Swimming',this)"><span class="goal-icon-web">🏊‍♀️</span>Swimming</button>
+        <button class="goal-btn-web" onclick="pick('activity','Weight training',this)"><span class="goal-icon-web">🏋️‍♀️</span>Weight training</button>
+        <button class="goal-btn-web" onclick="pick('activity','Cycling',this)"><span class="goal-icon-web">🚴‍♀️</span>Cycling</button>
+        <button class="goal-btn-web" onclick="pick('activity','Yoga / Pilates',this)"><span class="goal-icon-web">🧘‍♀️</span>Yoga / Pilates</button>
+      </div>
+      <button class="modal-next-web" onclick="modalNext()">Continue →</button>
+      <button class="modal-back-web" onclick="modalBack()">← Back</button>
+    </div>
+    <div class="modal-step-web" id="ms-level-web">
+      <div class="modal-title-web">Fitness level & schedule</div>
+      <div class="modal-sub-web">Your coach adapts to you — be honest for the best plan.</div>
+      <div class="modal-q-web">Fitness level:</div>
+      <div class="level-row-web">
+        <button class="level-btn-web" onclick="pick('level','Beginner',this)">Beginner</button>
+        <button class="level-btn-web" onclick="pick('level','Intermediate',this)">Intermediate</button>
+        <button class="level-btn-web" onclick="pick('level','Advanced',this)">Advanced</button>
+      </div>
+      <div class="modal-q-web">Days per week:</div>
+      <div class="level-row-web">
+        <button class="level-btn-web" onclick="pick('days','2',this)">2</button>
+        <button class="level-btn-web" onclick="pick('days','3',this)">3</button>
+        <button class="level-btn-web" onclick="pick('days','4',this)">4</button>
+        <button class="level-btn-web" onclick="pick('days','5+',this)">5+</button>
+      </div>
+      <button class="modal-next-web" style="margin-top:12px;" onclick="modalNext()">Continue →</button>
+      <button class="modal-back-web" onclick="modalBack()">← Back</button>
+    </div>
+    <div class="modal-step-web" id="ms-cycle-web">
+      <div class="modal-title-web">Set up your cycle</div>
+      <div class="modal-sub-web">HERFORM uses this to calculate your phase and predict your next period.</div>
+      <div class="modal-q-web">When did your last period start?</div>
+      <input class="modal-input-web" type="date" id="last-period-input-web">
+      <div class="modal-q-web">Usual cycle length:</div>
+      <div class="cl-row">
+        <button class="cl-btn-web" onclick="pick('cycleLen','25',this)">25d</button>
+        <button class="cl-btn-web" onclick="pick('cycleLen','26',this)">26d</button>
+        <button class="cl-btn-web" onclick="pick('cycleLen','27',this)">27d</button>
+        <button class="cl-btn-web selected" onclick="pick('cycleLen','28',this)">28d</button>
+        <button class="cl-btn-web" onclick="pick('cycleLen','29',this)">29d</button>
+        <button class="cl-btn-web" onclick="pick('cycleLen','30',this)">30d</button>
+        <button class="cl-btn-web" onclick="pick('cycleLen','32',this)">32d</button>
+        <button class="cl-btn-web" onclick="pick('cycleLen','35',this)">35d</button>
+      </div>
+      <button class="modal-next-web" onclick="finishSetup()">Create My Plan →</button>
+      <button class="modal-back-web" onclick="modalBack()">← Back</button>
+    </div>
+  </div>
+</div>
+
+<!-- PERIOD CALENDAR MODAL -->
+<div class="modal-overlay hidden" id="period-cal-modal-web">
+  <div class="modal-sheet-web">
+    <div class="modal-handle-web"></div>
+    <div class="modal-title-web">Log Period Start</div>
+    <div class="modal-sub-web">Select the date your period started.</div>
+    <div id="period-quick-dates-web" style="background:var(--card);border:1px solid var(--border);border-radius:12px;overflow:hidden;margin-bottom:14px;"></div>
+    <div class="modal-q-web">Or pick a specific date:</div>
+    <input type="date" id="period-cal-input-web" class="modal-input-web">
+    <button class="modal-next-web" onclick="confirmPeriodDateWeb()">Confirm →</button>
+    <button class="modal-back-web" onclick="document.getElementById('period-cal-modal-web').classList.add('hidden')">Cancel</button>
+  </div>
+</div>
+
+<!-- ACTIVITY LOG MODAL -->
+<div class="modal-overlay hidden" id="activity-log-modal-web">
+  <div class="modal-sheet-web">
+    <div class="modal-handle-web"></div>
+    <div class="modal-title-web">Log Activity</div>
+    <div class="modal-sub-web">Tell your AI coach what you did — it'll factor this into tomorrow's plan.</div>
+    <div class="modal-q-web">Activity type:</div>
+    <div class="act-grid-web">
+      <button class="act-btn-web selected" onclick="selAct(this,'Planned Workout')"><div class="act-icon-web">🏋️‍♀️</div>Planned Workout</button>
+      <button class="act-btn-web" onclick="selAct(this,'Running')"><div class="act-icon-web">🏃‍♀️</div>Running</button>
+      <button class="act-btn-web" onclick="selAct(this,'Cycling')"><div class="act-icon-web">🚴‍♀️</div>Cycling</button>
+      <button class="act-btn-web" onclick="selAct(this,'Swimming')"><div class="act-icon-web">🏊‍♀️</div>Swimming</button>
+      <button class="act-btn-web" onclick="selAct(this,'Yoga')"><div class="act-icon-web">🧘‍♀️</div>Yoga</button>
+      <button class="act-btn-web" onclick="selAct(this,'Sport')"><div class="act-icon-web">🏸</div>Sport</button>
+      <button class="act-btn-web" onclick="selAct(this,'Walk / Hike')"><div class="act-icon-web">🚶‍♀️</div>Walk / Hike</button>
+      <button class="act-btn-web" onclick="selAct(this,'HIIT')"><div class="act-icon-web">⚡</div>HIIT</button>
+      <button class="act-btn-web" onclick="selAct(this,'Other')"><div class="act-icon-web">✦</div>Other</button>
+    </div>
+    <div class="modal-q-web">Duration:</div>
+    <div class="dur-row-web">
+      <button class="dur-btn-web" onclick="selDur(this,'15')">15m</button>
+      <button class="dur-btn-web" onclick="selDur(this,'20')">20m</button>
+      <button class="dur-btn-web selected" onclick="selDur(this,'30')">30m</button>
+      <button class="dur-btn-web" onclick="selDur(this,'45')">45m</button>
+      <button class="dur-btn-web" onclick="selDur(this,'60')">60m</button>
+      <button class="dur-btn-web" onclick="selDur(this,'90')">90m+</button>
+    </div>
+    <div class="modal-q-web">How hard? (effort level)</div>
+    <div class="effort-row-web">
+      <button class="effort-btn-web" onclick="selEffort(this,1)">😌</button>
+      <button class="effort-btn-web" onclick="selEffort(this,2)">🙂</button>
+      <button class="effort-btn-web selected" onclick="selEffort(this,3)">😤</button>
+      <button class="effort-btn-web" onclick="selEffort(this,4)">😰</button>
+      <button class="effort-btn-web" onclick="selEffort(this,5)">🥵</button>
+    </div>
+    <textarea class="log-note-web" id="log-note-web" placeholder="How did it feel? Any PRs? Notes for your coach…"></textarea>
+    <button class="modal-next-web" onclick="submitActivityLog()">Save & Tell AI Coach →</button>
+    <button class="modal-back-web" onclick="document.getElementById('activity-log-modal-web').classList.add('hidden')">Cancel</button>
+  </div>
+</div>
+
+<!-- RESET PASSWORD MODAL -->
+<div class="modal-overlay hidden" id="reset-pw-modal">
+  <div class="modal-sheet-web">
+    <div class="modal-handle-web"></div>
+    <div class="modal-title-web">Reset Password</div>
+    <div class="modal-sub-web">We'll send a reset link to your email. Click it to set a new password.</div>
+    <div class="auth-msg" id="reset-pw-msg" style="margin-bottom:14px;"></div>
+    <input class="modal-input-web" type="email" id="reset-pw-email" placeholder="Your email address">
+    <button class="modal-next-web" onclick="submitResetPassword()">Send Reset Link →</button>
+    <button class="modal-back-web" onclick="document.getElementById('reset-pw-modal').classList.add('hidden')">Cancel</button>
+  </div>
+</div>
+
+<!-- CELEBRATION -->
+<div class="cel-overlay hidden" id="cel-overlay-web">
+  <canvas id="confetti-canvas-web"></canvas>
+  <div class="cel-content">
+    <span class="cel-emoji" id="cel-emoji-web">🎉</span>
+    <div class="cel-title">Session Complete!</div>
+    <div class="cel-sub" id="cel-sub-web">You showed up. That's everything.</div>
+    <div class="cel-stats">
+      <div class="cel-stat"><div class="cel-stat-val" id="cel-streak-web">0</div><div class="cel-stat-lbl">Day Streak</div></div>
+      <div class="cel-stat"><div class="cel-stat-val" id="cel-sessions-web">0</div><div class="cel-stat-lbl">Sessions</div></div>
+    </div>
+    <button class="cel-btn" style="background:var(--sage);color:white;" onclick="closeCelebration()">Done 🙌</button>
+    <button class="cel-btn" style="background:var(--card);color:var(--off);border:1px solid var(--border);" onclick="closeCelebration();setTimeout(openActivityLog,300)">Add Notes</button>
+  </div>
+</div>
+<script>
+// ══════════════════════════════════════════
+// SUPABASE CONFIG
+// Replace with your actual Supabase project URL and anon key
+// Get these from: supabase.com → your project → Settings → API
+// ══════════════════════════════════════════
+const SUPABASE_URL = 'YOUR_SUPABASE_URL';
+const SUPABASE_ANON_KEY = 'YOUR_SUPABASE_ANON_KEY';
+const isLocal = window.location.hostname === 'localhost' || window.location.protocol === 'file:' || SUPABASE_URL === 'YOUR_SUPABASE_URL';
+const sb = isLocal ? null : supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+// ══════════════════════════════════════════
+// STATE
+// ══════════════════════════════════════════
+let currentUser = null;
+let profile = null;    // { name, goal, activity, level, days }
+let cycleData = null;  // { lastPeriodDate, estimatedLen, history:[] }
+let stats = { sessions:0, streak:0, skipped:0, lastDate:'' };
+let conversationHistory = [];
+let totalEx = 0, checkedEx = new Set();
+let logDraft = { activityType:'Planned Workout', duration:'30', effort:3, note:'' };
+let modalFlow = [], modalIndex = 0, draft = {};
+
+// ══════════════════════════════════════════
+// GOAL → WORKOUT LIBRARY
+// ══════════════════════════════════════════
+const GOAL_WORKOUTS = {
+  'Running & cardio':{
+    Menstrual:{title:'Gentle Recovery Run',duration:'20 min',intensity:'Easy',exercises:[['Easy jog / walk','20 min'],['Hip flexor stretch','3×30s'],['Calf stretch','3×30s'],['Foam roll legs','5 min'],['Deep breathing','3 min']]},
+    Follicular:{title:'Interval Run Training',duration:'40 min',intensity:'High',exercises:[['Warm-up jog','10 min'],['400m intervals','6×400m'],['Recovery walk','90s between'],['Stride outs','4×80m'],['Cool-down & stretch','8 min']]},
+    Ovulation:{title:'Tempo Run — Push PR',duration:'45 min',intensity:'Peak',exercises:[['Warm-up','10 min'],['Tempo run at race pace','20 min'],['Hill sprints','5×60s'],['Speed strides','4×100m'],['Cool-down','8 min']]},
+    Luteal:{title:'Easy Base Run',duration:'30 min',intensity:'Moderate',exercises:[['Easy-paced run','25 min'],['Dynamic stretching','5 min'],['Glute activation','2×15'],['Calf raises','3×15'],['Breath work','3 min']]}
+  },
+  'Train for a sport':{
+    Menstrual:{title:'Mobility & Recovery',duration:'25 min',intensity:'Low',exercises:[['Joint mobility circuit','10 min'],['Gentle yoga flow','10 min'],['Balance work','2×30s each'],['Breathing','5 min'],['Light stretching','5 min']]},
+    Follicular:{title:'Agility & Power Session',duration:'45 min',intensity:'High',exercises:[['Ladder drills','3×2 min'],['Lateral shuttle runs','4×30s'],['Explosive jump squats','3×10'],['Reaction drills','3×1 min'],['Sport-specific sprints','5×20m']]},
+    Ovulation:{title:'Peak Performance Training',duration:'50 min',intensity:'Peak',exercises:[['Warm-up agility','10 min'],['Plyometric jumps','4×8'],['Power cleans / med ball','4×6'],['Sprint intervals','6×30s'],['Match simulation drills','15 min']]},
+    Luteal:{title:'Skill & Technique Day',duration:'35 min',intensity:'Moderate',exercises:[['Technical drills','15 min'],['Footwork patterns','3×2 min'],['Core stability','3×45s'],['Moderate cardio','10 min'],['Cool-down stretch','7 min']]}
+  },
+  'Build muscle & strength':{
+    Menstrual:{title:'Active Recovery & Mobility',duration:'30 min',intensity:'Low',exercises:[['Gentle yoga flow','15 min'],['Bodyweight squats','2×12'],['Resistance band work','2×15'],['Hip circles','3×10 each'],['Foam rolling','10 min']]},
+    Follicular:{title:'Lower Body Power Build',duration:'50 min',intensity:'High',exercises:[['Barbell back squat','4×6'],['Romanian deadlift','4×8'],['Bulgarian split squat','3×10 each'],['Hip thrust','4×12'],['Calf raises','3×15']]},
+    Ovulation:{title:'Full Body — Push Your PRs',duration:'55 min',intensity:'Peak',exercises:[['Deadlift (PR attempt)','5×3'],['Bench press','4×5'],['Barbell row','4×6'],['Overhead press','3×6'],['Weighted pull-ups','3×Max']]},
+    Luteal:{title:'Moderate Strength & Tone',duration:'40 min',intensity:'Moderate',exercises:[['Goblet squat','3×12'],['Dumbbell Romanian deadlift','3×12'],['Dumbbell row','3×12 each'],['Glute bridge','3×15'],['Plank hold','3×40s']]}
+  },
+  'Lose weight & tone':{
+    Menstrual:{title:'Gentle Movement & Restore',duration:'25 min',intensity:'Low',exercises:[['Walking','20 min'],['Yoga stretches','10 min'],['Bodyweight glute bridge','2×15'],['Breathing exercises','3 min'],['Light foam rolling','5 min']]},
+    Follicular:{title:'HIIT Fat Burn Circuit',duration:'40 min',intensity:'High',exercises:[['Jump squats','4×15'],['Mountain climbers','4×30s'],['Kettlebell swings','3×15'],['Burpees','3×10'],['High knees sprint','4×30s']]},
+    Ovulation:{title:'Peak Cardio Sculpt',duration:'45 min',intensity:'Peak',exercises:[['Sprint intervals','8×30s'],['Box jumps','4×10'],['Battle ropes','4×30s'],['Jump lunges','3×12 each'],['Plyo push-ups','3×10']]},
+    Luteal:{title:'Pilates Tone & Burn',duration:'35 min',intensity:'Moderate',exercises:[['Pilates roll-downs','3×10'],['Side-lying leg lifts','3×15 each'],['Glute kickbacks','3×15'],['Dead bug core','3×10'],['Bicycle crunches','3×20']]}
+  },
+  'Yoga & flexibility':{
+    Menstrual:{title:'Restorative Yin Yoga',duration:'30 min',intensity:'Gentle',exercises:[["Child's pose",'3 min'],['Supine butterfly','4 min'],['Reclined twist','3 min each'],['Legs up the wall','5 min'],['Savasana','5 min']]},
+    Follicular:{title:'Power Vinyasa Flow',duration:'45 min',intensity:'Dynamic',exercises:[['Sun salutations A+B','10 min'],['Warrior sequence','10 min'],['Balance poses','10 min'],['Core work','10 min'],['Cool-down stretches','5 min']]},
+    Ovulation:{title:'Advanced Yoga Challenge',duration:'50 min',intensity:'Strong',exercises:[['Arm balance prep','10 min'],['Handstand / crow work','15 min'],['Deep backbend flow','10 min'],['Hip opener sequence','10 min'],['Meditation','5 min']]},
+    Luteal:{title:'Gentle Flow & Restore',duration:'35 min',intensity:'Calming',exercises:[['Gentle warm-up flow','10 min'],['Hip openers','10 min'],['Supported inversions','5 min'],['Pranayama breathing','5 min'],['Yoga nidra','10 min']]}
+  },
+  'General health':{
+    Menstrual:{title:'Rest & Restore',duration:'20 min',intensity:'Easy',exercises:[['Gentle walk','15 min'],['Light stretching','10 min'],['Breathing exercises','5 min'],['Foam rolling','5 min'],['Meditation','5 min']]},
+    Follicular:{title:'Full Body Functional',duration:'40 min',intensity:'Moderate-High',exercises:[['Goblet squat','3×12'],['Push-up rows','3×10'],['Reverse lunges','3×12 each'],['Dumbbell press','3×12'],['Core plank','3×40s']]},
+    Ovulation:{title:'Peak Energy Workout',duration:'45 min',intensity:'High',exercises:[['Circuit: squat jumps','4×12'],['Push-ups','4×15'],['Kettlebell swings','4×15'],['Step-ups','3×12 each'],['Sprint finisher','4×30s']]},
+    Luteal:{title:'Mindful Movement',duration:'30 min',intensity:'Moderate',exercises:[['Bodyweight squats','3×12'],['Hip thrust','3×15'],['Shoulder press','3×12'],['Lateral band walks','3×15'],['Stretching cooldown','8 min']]}
+  }
+};
+
+const PHASES = [
+  {name:'Menstrual', start:1,  end:5,  color:'#D4756A', trainSub:'Low intensity · Rest & gentle movement'},
+  {name:'Follicular',start:6,  end:13, color:'#7A9E87', trainSub:'High intensity · Strength & cardio'},
+  {name:'Ovulation', start:14, end:16, color:'#C9955A', trainSub:'Peak intensity · Maximum output'},
+  {name:'Luteal',    start:17, end:999,color:'#8B8EC7', trainSub:'Moderate · Recover & nourish'}
+];
+
+function getPhaseByDay(day){
+  if(day<=5)  return PHASES[0];
+  if(day<=13) return PHASES[1];
+  if(day<=16) return PHASES[2];
+  return PHASES[3];
+}
+
+function getCycleDay(){
+  if(!cycleData?.lastPeriodDate) return null;
+  const last=new Date(cycleData.lastPeriodDate); last.setHours(0,0,0,0);
+  const today=new Date(); today.setHours(0,0,0,0);
+  return Math.floor((today-last)/86400000)+1;
+}
+function getAvgCycleLen(){
+  if(!cycleData?.history?.length) return cycleData?.estimatedLen||28;
+  const lens=cycleData.history.filter(h=>h.len).map(h=>h.len);
+  if(!lens.length) return cycleData?.estimatedLen||28;
+  return Math.round(lens.reduce((a,b)=>a+b,0)/lens.length);
+}
+function getNextPeriodDate(){
+  if(!cycleData?.lastPeriodDate) return null;
+  const last=new Date(cycleData.lastPeriodDate); last.setHours(0,0,0,0);
+  return new Date(last.getTime()+getAvgCycleLen()*86400000);
+}
+function daysUntilPeriod(){
+  const next=getNextPeriodDate(); if(!next) return null;
+  const today=new Date(); today.setHours(0,0,0,0);
+  return Math.round((next-today)/86400000);
+}
+function isPeriodOverdue(){ const d=daysUntilPeriod(); return d!==null&&d<0; }
+function daysOverdue(){ const d=daysUntilPeriod(); return d!==null&&d<0?Math.abs(d):0; }
+function formatDate(d){
+  if(!d) return '—';
+  return new Date(d).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'});
+}
+
+// ══════════════════════════════════════════
+// AUTH
+// ══════════════════════════════════════════
+function showView(id){
+  ['view-signin','view-signup','view-forgot'].forEach(v=>{
+    document.getElementById(v).style.display=v===id?'flex':'none';
+  });
+}
+function showMsg(id, msg, type){
+  const el=document.getElementById(id);
+  el.textContent=msg; el.className='auth-msg '+type+' show';
+}
+
+async function signIn(){
+  const email=document.getElementById('signin-email').value.trim();
+  const pw=document.getElementById('signin-pw').value;
+  if(!email||!pw){showMsg('signin-msg','Please enter email and password.','error');return;}
+  const btn=document.querySelector('#view-signin .auth-btn');
+  btn.disabled=true; btn.textContent='Signing in…';
+  if(isLocal){
+    // Demo mode — skip Supabase
+    await loadFromLocalStorage();
+    launchApp({email,user_metadata:{full_name:'Demo User'}});
+    return;
+  }
+  const{data,error}=await sb.auth.signInWithPassword({email,password:pw});
+  btn.disabled=false; btn.textContent='Sign In →';
+  if(error){showMsg('signin-msg',error.message,'error');return;}
+  currentUser=data.user;
+  await loadUserData();
+  launchApp(data.user);
+}
+
+async function signUp(){
+  const name=document.getElementById('signup-name').value.trim();
+  const email=document.getElementById('signup-email').value.trim();
+  const pw=document.getElementById('signup-pw').value;
+  if(!name||!email||!pw){showMsg('signup-msg','Please fill in all fields.','error');return;}
+  if(pw.length<6){showMsg('signup-msg','Password must be at least 6 characters.','error');return;}
+  const btn=document.querySelector('#view-signup .auth-btn');
+  btn.disabled=true; btn.textContent='Creating account…';
+  if(isLocal){
+    await loadFromLocalStorage();
+    launchApp({email,user_metadata:{full_name:name}});
+    return;
+  }
+  const{data,error}=await sb.auth.signUp({email,password:pw,options:{data:{full_name:name}}});
+  btn.disabled=false; btn.textContent='Create Account →';
+  if(error){
+    // Detect already-registered email
+    if(error.message.toLowerCase().includes('already')
+      ||error.message.toLowerCase().includes('registered')
+      ||error.message.toLowerCase().includes('exists')){
+      showMsg('signup-msg',
+        'This email already has an account. <a onclick="showView(\'view-signin\')" style="color:var(--accent);cursor:pointer;text-decoration:underline;">Sign in instead</a> or <a onclick="showView(\'view-forgot\')" style="color:var(--accent);cursor:pointer;text-decoration:underline;">reset your password</a>.',
+        'error');
+    } else {
+      showMsg('signup-msg',error.message,'error');
+    }
+    return;
+  }
+  // Supabase returns user but no session when email confirmation required
+  if(data.user&&!data.session){
+    showMsg('signup-msg','✓ Almost there! Check your email and click the confirmation link to activate your account.','success');
+    return;
+  }
+  // If user already confirmed (e.g. email confirm disabled), log in directly
+  if(data.user&&data.session){
+    currentUser=data.user;
+    await loadUserData();
+    launchApp(data.user);
+  }
+}
+
+async function sendMagicLink(src='signin'){
+  const email=document.getElementById(src==='forgot'?'forgot-email':'signin-email').value.trim();
+  if(!email){showMsg(src+'-msg','Please enter your email.','error');return;}
+  if(isLocal){showMsg(src+'-msg','Magic links only work when deployed to Vercel.','error');return;}
+  const{error}=await sb.auth.signInWithOtp({email,options:{emailRedirectTo:window.location.origin+'/app'}});
+  if(error){showMsg(src+'-msg',error.message,'error');return;}
+  showMsg(src+'-msg','✓ Magic link sent! Check your inbox and click the link to sign in.','success');
+}
+
+async function signOut(){
+  if(!isLocal) await sb.auth.signOut();
+  currentUser=null; profile=null; cycleData=null;
+  stats={sessions:0,streak:0,skipped:0,lastDate:''};
+  conversationHistory=[];
+  document.getElementById('app-shell').style.display='none';
+  document.getElementById('app-shell').classList.remove('visible');
+  document.getElementById('chat-msgs-web').innerHTML='';
+  showView('view-signin');
+}
+
+function launchApp(user){
+  currentUser=user;
+  document.getElementById('view-signin').style.display='none';
+  document.getElementById('view-signup').style.display='none';
+  document.getElementById('view-forgot').style.display='none';
+  const shell=document.getElementById('app-shell');
+  shell.style.display='flex';
+  shell.classList.add('visible');
+  const email=user?.email||'';
+  const name=user?.user_metadata?.full_name||email.split('@')[0]||'there';
+  // Topbar avatar + dropdown
+  const initial = name[0]?.toUpperCase()||'?';
+  const avatarEl = document.getElementById('topbar-avatar');
+  if(avatarEl) avatarEl.textContent = initial;
+  setText('td-name', name);
+  setText('td-email', email);
+  // Profile page
+  document.getElementById('p-name-web').textContent=name;
+  document.getElementById('p-email-web').textContent=email;
+  document.getElementById('p-avatar-web').textContent=initial;
+  updateAllUI();
+  // Only show onboarding if profile is genuinely missing
+  // If data loaded from Supabase, skip onboarding entirely
+  if(!profile&&!cycleData) setTimeout(()=>openModal('full'),800);
+  else if(profile&&document.getElementById('chat-msgs-web').innerHTML==='') setTimeout(generateFirstPlan,600);
+}
+
+// Check Supabase session on load
+async function initAuth(){
+  if(isLocal){
+    loadFromLocalStorage();
+    // Show sign-in page even in local mode so you can test the auth UI
+    showView('view-signin');
+    return;
+  }
+  const{data}=await sb.auth.getSession();
+  if(data.session){
+    currentUser=data.session.user;
+    await loadUserData();
+    launchApp(data.session.user);
+  } else {
+    showView('view-signin');
+  }
+  // Listen for auth changes (magic link callback, etc.)
+  sb.auth.onAuthStateChange(async(event,session)=>{
+    if(event==='SIGNED_IN'&&session){
+      currentUser=session.user;
+      await loadUserData();
+      launchApp(session.user);
+    }
+  });
+}
+
+// ══════════════════════════════════════════
+// DATA: SUPABASE + LOCALSTORAGE FALLBACK
+// ══════════════════════════════════════════
+async function saveUserData(){
+  if(isLocal||!currentUser){ saveToLocalStorage(); return; }
+  try{
+    const{error}=await sb.from('herform_users').upsert({
+      user_id:currentUser.id,
+      profile:JSON.stringify(profile),
+      cycle_data:JSON.stringify(cycleData),
+      stats:JSON.stringify(stats),
+      conversation:JSON.stringify(conversationHistory.slice(-30)),
+      updated_at:new Date().toISOString()
+    },{onConflict:'user_id'});
+    if(error){
+      console.error('Supabase save error:', error.message, error.code, error.hint);
+      saveToLocalStorage();
+    } else {
+      console.log('Saved to Supabase OK for user:', currentUser.id);
+    }
+  }catch(e){
+    console.error('Save failed:', e);
+    saveToLocalStorage();
+  }
+}
+
+async function loadUserData(){
+  if(isLocal||!currentUser){ loadFromLocalStorage(); return; }
+  try{
+    const{data}=await sb.from('herform_users').select('*').eq('user_id',currentUser.id).single();
+    if(data){
+      if(data.profile) profile=JSON.parse(data.profile);
+      if(data.cycle_data) cycleData=JSON.parse(data.cycle_data);
+      if(data.stats) stats=JSON.parse(data.stats);
+      if(data.conversation) conversationHistory=JSON.parse(data.conversation);
+    }
+  }catch(e){ loadFromLocalStorage(); }
+}
+
+function saveToLocalStorage(){
+  try{
+    localStorage.setItem('hf3_profile',JSON.stringify(profile));
+    localStorage.setItem('hf3_cycle',JSON.stringify(cycleData));
+    localStorage.setItem('hf3_stats',JSON.stringify(stats));
+    localStorage.setItem('hf3_history',JSON.stringify(conversationHistory.slice(-30)));
+  }catch(e){}
+}
+function loadFromLocalStorage(){
+  try{
+    const p=localStorage.getItem('hf3_profile'); if(p) profile=JSON.parse(p);
+    const c=localStorage.getItem('hf3_cycle');   if(c) cycleData=JSON.parse(c);
+    const s=localStorage.getItem('hf3_stats');   if(s) stats=JSON.parse(s);
+    const h=localStorage.getItem('hf3_history'); if(h) conversationHistory=JSON.parse(h);
+  }catch(e){}
+}
+
+// ══════════════════════════════════════════
+// UI UPDATE — all screens sync from state
+// ══════════════════════════════════════════
+function updateAllUI(){
+  const cycleDay=getCycleDay();
+  const phase=cycleDay?getPhaseByDay(cycleDay):null;
+  const goalKey=profile?.goal||'General health';
+  const wLib=GOAL_WORKOUTS[goalKey]||GOAL_WORKOUTS['General health'];
+  const todayW=phase?wLib[phase.name]:null;
+  const daysLeft=daysUntilPeriod();
+  const overdue=isPeriodOverdue();
+
+  // Badge
+  setText('home-badge', cycleDay&&phase?`Day ${cycleDay} · ${phase.name} Phase`:'Set up your cycle');
+  setText('home-sessions', stats.sessions);
+  setText('home-cycleday', cycleDay||'—');
+  setText('home-streak', stats.streak);
+  setText('home-skipped', stats.skipped);
+
+  // Phase strip
+  if(phase&&cycleDay){
+    const ps=document.getElementById('ps-phase-web');
+    if(ps){ps.textContent=phase.name+' Phase';ps.style.color=phase.color;}
+    setText('ps-sub-web', phase.trainSub);
+    const pd=document.getElementById('ps-day-web');
+    if(pd){pd.textContent=cycleDay;pd.style.color=phase.color;}
+    let nextTxt='';
+    if(overdue) nextTxt=`${daysOverdue()}d overdue — log period`;
+    else if(daysLeft===0) nextTxt='Period predicted today';
+    else if(daysLeft>0) nextTxt=`${daysLeft}d until period`;
+    const pn=document.getElementById('ps-next-web');
+    if(pn){pn.textContent=nextTxt;pn.style.color=overdue?'var(--rose)':'var(--muted)';}
+
+    // Phase progress bar
+    const bar=document.getElementById('phase-bar-web');
+    if(bar){
+      const total=cycleData?.estimatedLen||28;
+      const pct=Math.min(100,((cycleDay-1)/total)*100);
+      bar.innerHTML=`<div style="width:${pct}%;background:${phase.color};height:4px;transition:width 0.4s;"></div><div style="flex:1;background:${phase.color}33;height:4px;"></div>`;
+    }
+  }
+
+  // Period alert
+  checkPeriodAlertWeb();
+
+  // Workout card
+  if(todayW&&phase){
+    setText('wc-goal-tag-web',(profile?.activity||goalKey).toUpperCase());
+    const wpt=document.getElementById('wc-phase-tag-web');
+    if(wpt){wpt.textContent=`${phase.name} · ${todayW.intensity}`;wpt.style.color=phase.color;}
+    setText('hw-title-web', todayW.title);
+    setText('wc-duration-web', todayW.duration);
+    setText('wc-intensity-web', todayW.intensity);
+  }
+
+  // Progress ring
+  const target=parseInt(profile?.days||'3');
+  const done=stats.sessions%target;
+  const pct=Math.round((done/target)*100);
+  const arc=document.getElementById('ring-arc-web');
+  if(arc) arc.style.strokeDashoffset=175.9-(175.9*(done/target));
+  setText('ring-pct-web', pct+'%');
+  setText('prog-title-web',`${done} of ${target} sessions done`);
+  setText('prog-sub-web', done>=target?'Weekly goal complete! 🎉':`${target-done} more to hit your weekly target.`);
+
+  // AI plan
+  if(profile&&todayW&&phase){
+    document.getElementById('plan-section-web').style.display='block';
+    document.getElementById('streak-row-web').style.display='flex';
+    renderPlanCardWeb(todayW, phase);
+  }
+  setText('sv-streak-web', stats.streak);
+  setText('sv-sessions-web', stats.sessions);
+  setText('sv-skipped-web', stats.skipped);
+  const aiSub=document.getElementById('ai-sub-web');
+  if(aiSub) aiSub.textContent=phase&&cycleDay?`${goalKey} · Day ${cycleDay} · ${phase.name} phase`:'Set up your profile to begin';
+
+  // Cycle screen
+  if(phase&&cycleDay){
+    setText('ci-phase-web', phase.name);
+    let dayTxt=`Day ${cycleDay}`;
+    if(overdue) dayTxt+=` (${daysOverdue()}d overdue — log period)`;
+    setText('ci-day-web', dayTxt);
+    setText('ci-length-web',`${getAvgCycleLen()} days${cycleData?.history?.length>=2?' (from your data)':' (estimated)'}`);
+    let nextLabel='—';
+    if(daysLeft!==null){
+      if(daysLeft<0) nextLabel=`${Math.abs(daysLeft)}d overdue`;
+      else if(daysLeft===0) nextLabel='Today (predicted)';
+      else nextLabel=`${formatDate(getNextPeriodDate())} (in ${daysLeft}d)`;
+    }
+    setText('ci-next-web', nextLabel);
+    setText('ci-logged-web', cycleData?.history?.length||0);
+    drawWheelWeb(cycleDay, cycleData?.estimatedLen||28);
+    renderCycleHistoryWeb();
+  }
+
+  // Profile
+  if(profile){
+    const goalCard=document.getElementById('goal-display-card');
+    if(goalCard) goalCard.style.display='block';
+    setText('gdc-goal-web', profile.goal);
+    setText('gdc-detail-web',`${profile.activity||'General'} · ${profile.level||'Intermediate'} · ${profile.days||'3'}x/week`);
+  }
+  setText('ps-sessions-web', stats.sessions);
+  setText('ps-cycleday-web', cycleDay||'—');
+  setText('ps-streak-web', stats.streak);
+}
+
+function checkPeriodAlertWeb(){
+  const wrap=document.getElementById('period-alert-wrap-web'); if(!wrap)return;
+  const days=daysUntilPeriod();
+  if(days===null){wrap.innerHTML='';return;}
+  if(days<0){
+    const n=Math.abs(days);
+    wrap.innerHTML=`<div class="period-alert-web"><span style="font-size:20px;">🔴</span><div class="pa-text"><strong>Your period is ${n} day${n>1?'s':''} late.</strong> Log it to keep your cycle accurate.</div><button class="pa-btn" onclick="openPeriodCalendar()">Log it</button></div>`;
+  } else if(days<=2){
+    const msg=days===0?'Your period is predicted today.':` Your period is predicted in ${days} day${days>1?'s':''}.`;
+    wrap.innerHTML=`<div class="period-alert-web"><span style="font-size:20px;">🔴</span><div class="pa-text"><strong>${msg}</strong> Has it started?</div><button class="pa-btn" onclick="openPeriodCalendar()">Log it</button></div>`;
+  } else {
+    wrap.innerHTML='';
+  }
+}
+
+// ══════════════════════════════════════════
+// PLAN CARD + EXERCISE CHECKLIST
+// ══════════════════════════════════════════
+function renderPlanCardWeb(workout, phase){
+  const titleEl=document.getElementById('plan-title-web');
+  if(titleEl) titleEl.textContent=workout.title;
+  const badgesEl=document.getElementById('plan-badges-web');
+  if(badgesEl) badgesEl.innerHTML=`
+    <span class="plan-badge-web" style="background:${phase.color}22;color:${phase.color};">${phase.name}</span>
+    <span class="plan-badge-web" style="background:rgba(255,255,255,0.06);color:var(--muted);">${workout.intensity}</span>`;
+
+  totalEx=workout.exercises.length;
+  checkedEx=new Set();
+
+  const exWrap=document.getElementById('plan-exercises-web');
+  if(!exWrap) return;
+  exWrap.innerHTML=workout.exercises.map((ex,i)=>`
+    <div class="plan-ex-row" id="exr-${i}" onclick="toggleExWeb(${i})">
+      <div class="ex-cb" id="excb-${i}"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></div>
+      <span class="ex-name-web">${ex[0]}</span>
+      <span class="ex-sets-web">${ex[1]}</span>
+    </div>`).join('');
+
+  const fill=document.getElementById('plan-prog-fill-web');
+  if(fill) fill.style.width='0%';
+  updateCompleteBtn();
+}
+
+function toggleExWeb(i){
+  const cb=document.getElementById(`excb-${i}`);
+  const row=document.getElementById(`exr-${i}`);
+  if(!cb||!row) return;
+  if(checkedEx.has(i)){checkedEx.delete(i);cb.classList.remove('checked');row.classList.remove('done');}
+  else{checkedEx.add(i);cb.classList.add('checked');row.classList.add('done');cb.animate([{transform:'scale(1.3)'},{transform:'scale(1)'}],{duration:200,easing:'ease-out'});}
+  const fill=document.getElementById('plan-prog-fill-web');
+  if(fill) fill.style.width=Math.round((checkedEx.size/totalEx)*100)+'%';
+  updateCompleteBtn();
+}
+
+function updateCompleteBtn(){
+  const btn=document.getElementById('complete-btn-web'); if(!btn) return;
+  const allDone=checkedEx.size===totalEx&&totalEx>0;
+  btn.classList.toggle('ready',allDone);
+  btn.textContent=allDone?'🎉 Complete Session!':
+    totalEx>0?`✓ Mark Session Complete (${checkedEx.size}/${totalEx})`:'✓ Mark Session Complete';
+}
+
+function onCompleteSession(){
+  logSession();
+  showCelebrationWeb();
+}
+
+// ══════════════════════════════════════════
+// CYCLE WHEEL
+// ══════════════════════════════════════════
+function drawWheelWeb(day, total){
+  const svg=document.getElementById('cycle-svg-web'); if(!svg) return;
+  const cx=100,cy=100,r=74,sw=24,circ=2*Math.PI*r;
+  const fracs=[[Math.min(5,total)/total,'#D4756A'],[(Math.min(13,total)-5)/total,'#7A9E87'],[(Math.min(16,total)-13)/total,'#C9955A'],[(total-16)/total,'#8B8EC7']].filter(([f])=>f>0);
+  let html=`<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="#1e1e1e" stroke-width="${sw}"/>`;
+  let angle=-Math.PI/2;
+  fracs.forEach(([f,c])=>{
+    const len=f*circ;
+    html+=`<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${c}" stroke-width="${sw}" stroke-dasharray="${len} ${circ-len}" stroke-dashoffset="${-(angle-(-Math.PI/2))*r}" transform="rotate(${(angle+Math.PI/2)*180/Math.PI} ${cx} ${cy})" opacity="0.9"/>`;
+    angle+=f*2*Math.PI;
+  });
+  const da=-Math.PI/2+((day-1)/total)*2*Math.PI;
+  const dx=cx+r*Math.cos(da),dy=cy+r*Math.sin(da);
+  const ph=getPhaseByDay(day);
+  html+=`<circle cx="${dx}" cy="${dy}" r="11" fill="${ph.color}" stroke="#111" stroke-width="3"/>`;
+  html+=`<text x="${dx}" y="${dy}" text-anchor="middle" dominant-baseline="middle" font-size="8" fill="white" font-weight="700" font-family="Outfit,sans-serif">${day}</text>`;
+  html+=`<text x="${cx}" y="${cy-8}" text-anchor="middle" font-family="Outfit,sans-serif" font-size="24" fill="white" font-weight="700">${day}</text>`;
+  html+=`<text x="${cx}" y="${cy+12}" text-anchor="middle" font-size="10" fill="#666" font-weight="600" letter-spacing="1" font-family="Outfit,sans-serif">DAY</text>`;
+  svg.innerHTML=html;
+}
+
+// ══════════════════════════════════════════
+// PERIOD CALENDAR
+// ══════════════════════════════════════════
+function openPeriodCalendar(){
+  const today=new Date().toISOString().split('T')[0];
+  const calInput=document.getElementById('period-cal-input-web');
+  if(calInput) calInput.value=today;
+  const qd=document.getElementById('period-quick-dates-web');
+  if(qd){
+    qd.innerHTML='';
+    ['Today','Yesterday','2 days ago','3 days ago','4 days ago'].forEach((label,i)=>{
+      const d=new Date(); d.setDate(d.getDate()-i);
+      const val=d.toISOString().split('T')[0];
+      const fmt=d.toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'});
+      const btn=document.createElement('button');
+      btn.style.cssText=`width:100%;padding:13px 16px;background:${i===0?'rgba(212,117,106,0.12)':'none'};border:none;border-bottom:1px solid var(--border);font-family:'Outfit',sans-serif;font-size:13px;color:${i===0?'var(--accent)':'var(--off)'};cursor:pointer;display:flex;align-items:center;justify-content:space-between;`;
+      if(i===4) btn.style.borderBottom='none';
+      btn.innerHTML=`<span>${label}</span><span style="font-size:12px;color:var(--muted);">${fmt}</span>`;
+      btn.onclick=()=>{
+        if(calInput) calInput.value=val;
+        qd.querySelectorAll('button').forEach(b=>{b.style.background='none';b.style.color='var(--off)';});
+        btn.style.background='rgba(212,117,106,0.12)'; btn.style.color='var(--accent)';
+      };
+      qd.appendChild(btn);
+    });
+  }
+  document.getElementById('period-cal-modal-web').classList.remove('hidden');
+}
+
+function confirmPeriodDateWeb(){
+  const val=document.getElementById('period-cal-input-web')?.value;
+  if(!val) return;
+  document.getElementById('period-cal-modal-web').classList.add('hidden');
+  logPeriodOnDate(val);
+}
+
+function logPeriodOnDate(dateStr){
+  if(!cycleData){
+    cycleData={lastPeriodDate:dateStr,estimatedLen:28,history:[]};
+  } else {
+    const last=new Date(cycleData.lastPeriodDate);
+    const now=new Date(dateStr);
+    const actualLen=Math.round((now-last)/86400000);
+    if(actualLen>15&&actualLen<60){
+      cycleData.history.push({date:cycleData.lastPeriodDate,len:actualLen});
+      cycleData.estimatedLen=getAvgCycleLen();
+    }
+    cycleData.lastPeriodDate=dateStr;
+  }
+  saveUserData(); updateAllUI();
+  const d=new Date(dateStr);
+  showToast(`Period logged: ${d.toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long'})} 🔴`);
+}
+
+function renderCycleHistoryWeb(){
+  const list=document.getElementById('cycle-history-web'); if(!list) return;
+  if(!cycleData?.history?.length){list.innerHTML='<div style="font-size:13px;color:var(--muted);">No periods logged yet.</div>';return;}
+  list.innerHTML=[...cycleData.history].reverse().map((h,i)=>`
+    <div class="hist-item">
+      <div><div class="hist-date">${formatDate(h.date)}</div>${h.len?`<div class="hist-len">Cycle length: ${h.len} days</div>`:''}</div>
+      <button class="hist-del" onclick="deletePeriodLog(${cycleData.history.length-1-i})">×</button>
+    </div>`).join('');
+}
+
+function deletePeriodLog(idx){
+  cycleData.history.splice(idx,1);
+  if(cycleData.history.length>=2) cycleData.estimatedLen=getAvgCycleLen();
+  saveUserData(); updateAllUI();
+}
+
+// ══════════════════════════════════════════
+// STATS
+// ══════════════════════════════════════════
+function logSession(){
+  stats.sessions++;
+  const today=new Date().toDateString();
+  const yesterday=new Date(Date.now()-86400000).toDateString();
+  if(stats.lastDate===yesterday) stats.streak++;
+  else if(stats.lastDate!==today) stats.streak=1;
+  stats.lastDate=today;
+  saveUserData(); updateAllUI();
+}
+
+// ══════════════════════════════════════════
+// AI CHAT
+// ══════════════════════════════════════════
+const DEMO_RESPONSES=[
+  ctx=>`Hey ${ctx.name}! You're on Day ${ctx.day} — ${ctx.phase} phase. Today's plan is built for ${ctx.goal}: **${ctx.workout}**. Let's go! 💪`,
+  ctx=>`Since you're in ${ctx.phase} phase, your energy is ${ctx.phase==='Follicular'||ctx.phase==='Ovulation'?'at its peak — push hard today':'best used for focused, moderate work'}. Stick to today's ${ctx.workout} and you'll stay on track.`,
+  ctx=>`You've done ${ctx.sessions} sessions with a ${ctx.streak}-day streak — that's real consistency. Keep showing up. For ${ctx.goal} in the ${ctx.phase} phase, today is all about ${ctx.phase==='Menstrual'?'gentle recovery':'performance'}.`,
+  ctx=>`No worries about missing sessions — it happens to everyone. You're on Day ${ctx.day} (${ctx.phase} phase). Want me to give you a shorter 20-minute version to ease back in?`,
+  ctx=>`For ${ctx.goal} during ${ctx.phase} phase: ${ctx.phase==='Luteal'?'reduce intensity by ~20% and prioritise magnesium-rich foods':'keep intensity high and fuel with complex carbs'}. How are your energy levels today?`,
+];
+let demoIdx=0;
+
+function buildSystemPrompt(){
+  const cycleDay=getCycleDay();
+  const phase=cycleDay?getPhaseByDay(cycleDay):null;
+  const goalKey=profile?.goal||'General health';
+  const wLib=GOAL_WORKOUTS[goalKey]||GOAL_WORKOUTS['General health'];
+  const workout=phase?wLib[phase.name]:null;
+  const overdue=isPeriodOverdue();
+  const daysLeft=daysUntilPeriod();
+  let cycleStatus='No cycle data';
+  if(cycleDay){
+    if(overdue) cycleStatus=`Period ${daysOverdue()}d overdue — she hasn't logged new period. Normal, be supportive.`;
+    else if(daysLeft===0) cycleStatus='Period predicted today';
+    else if(daysLeft>0) cycleStatus=`Next period in ${daysLeft} days`;
+  }
+  return `You are HERFORM AI — warm, expert, evidence-based personal trainer for women.
+USER: Name: ${profile?.name||currentUser?.user_metadata?.full_name||'there'} | Goal: ${goalKey} | Activity: ${profile?.activity||'general'} | Level: ${profile?.level||'intermediate'} | ${profile?.days||'3'}x/week
+CYCLE: Day ${cycleDay||'?'} | Phase: ${phase?.name||'unknown'} | Status: ${cycleStatus} | Avg cycle: ${getAvgCycleLen()}d
+IMPORTANT: Cycle day counts continuously — never auto-resets. Day 32+ = delayed period, stays Luteal.
+TODAY'S WORKOUT: ${workout?.title||'not set'} | ${workout?.exercises?.map(e=>e[0]+' '+e[1]).join(', ')||'—'}
+PROGRESS: ${stats.sessions} sessions | ${stats.streak} streak | ${stats.skipped} skipped
+RULES: Tailor workouts to ${goalKey} AND current phase. Sport goals = sport-specific drills. Running = intervals/tempo. Never shame skips. Keep responses 2-5 sentences or a numbered list.`;
+}
+
+async function getAI(msg){
+  if(!profile){openModal('full');return;}
+  showTypingWeb();
+  const lower=msg.toLowerCase();
+  if(lower.includes('skipped')||lower.includes('missed')){stats.skipped++;stats.streak=0;saveUserData();}
+  if(lower.includes('done')||lower.includes('completed')||lower.includes('finished')) logSession();
+  conversationHistory.push({role:'user',content:msg});
+  try{
+    let reply;
+    if(isLocal){
+      await new Promise(r=>setTimeout(r,800+Math.random()*500));
+      const cycleDay=getCycleDay();
+      const phase=getPhaseByDay(cycleDay||9);
+      const ctx={
+        name:profile?.name||'there',day:cycleDay||'—',phase:phase?.name||'Follicular',
+        goal:profile?.goal||'General health',
+        workout:(()=>{const wl=GOAL_WORKOUTS[profile?.goal]||GOAL_WORKOUTS['General health'];return wl?.[phase?.name]?.title||"today's workout";})(),
+        sessions:stats.sessions,streak:stats.streak
+      };
+      const fn=DEMO_RESPONSES[demoIdx%DEMO_RESPONSES.length]; demoIdx++;
+      reply=fn(ctx);
+      if(demoIdx===1) reply='⚡ **Demo Mode** — deploy to Vercel for live AI\n\n'+reply;
+    } else {
+      const res=await fetch(VERCEL_API,{method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({messages:conversationHistory,cycleDay:getCycleDay(),phaseName:getPhaseByDay(getCycleDay()||9)?.name,userProfile:profile,stats,system:buildSystemPrompt()})});
+      if(!res.ok) throw new Error('API '+res.status);
+      const data=await res.json();
+      reply=data.reply||"I'm here — try rephrasing that.";
+    }
+    conversationHistory.push({role:'assistant',content:reply});
+    removeTypingWeb(); appendMsgWeb('ai',reply);
+    saveUserData();
+  }catch(e){
+    removeTypingWeb();
+    appendMsgWeb('ai',isLocal?'⚡ Demo mode: deploy to Vercel for live AI responses.':'⚠️ Could not reach AI. Check your Vercel API and ANTHROPIC_API_KEY.');
+  }
+}
+
+async function generateFirstPlan(){
+  if(!profile) return;
+  const area=document.getElementById('chat-msgs-web');
+  if(area&&area.innerHTML!=='') return;
+  const phase=getPhaseByDay(getCycleDay()||9);
+  const name=profile?.name||currentUser?.user_metadata?.full_name||'there';
+  appendMsgWeb('ai',`Hi ${name}! 👋 Your plan is ready. You're on Day ${getCycleDay()||'—'} — **${phase.name} phase** — which means ${phase.trainSub.toLowerCase()}. Your workouts are built for **${profile.goal}**${profile.activity?` with focus on ${profile.activity}`:''}.  Ask me anything below!`);
+}
+
+function appendMsgWeb(role,text){
+  const area=document.getElementById('chat-msgs-web'); if(!area) return;
+  const div=document.createElement('div');
+  div.className=`msg-web ${role==='user'?'msg-user-web':'msg-ai-web'}`;
+  div.innerHTML=`<div class="msg-lbl-web">${role==='user'?'You':'HERFORM AI'}</div><div class="msg-bub-web">${text.replace(/\n/g,'<br>').replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>')}</div>`;
+  area.appendChild(div); area.scrollTop=area.scrollHeight;
+}
+function showTypingWeb(){
+  const area=document.getElementById('chat-msgs-web'); if(!area) return;
+  const div=document.createElement('div'); div.className='msg-web msg-ai-web'; div.id='typing-web';
+  div.innerHTML=`<div class="msg-lbl-web">HERFORM AI</div><div class="typing-web"><div class="t-dot"></div><div class="t-dot"></div><div class="t-dot"></div></div>`;
+  area.appendChild(div); area.scrollTop=area.scrollHeight;
+}
+function removeTypingWeb(){const t=document.getElementById('typing-web');if(t)t.remove();}
+
+async function sendMsgWeb(){
+  const inp=document.getElementById('chat-inp-web');
+  const text=inp.value.trim(); if(!text) return;
+  inp.value=''; inp.style.height='';
+  appendMsgWeb('user',text); await getAI(text);
+}
+function sendChipWeb(el){const t=el.textContent;appendMsgWeb('user',t);getAI(t);}
+function handleKeyWeb(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendMsgWeb();}}
+function autoResizeWeb(el){el.style.height='auto';el.style.height=Math.min(el.scrollHeight,80)+'px';}
+
+// ══════════════════════════════════════════
+// CELEBRATION + CONFETTI
+// ══════════════════════════════════════════
+function showCelebrationWeb(){
+  const goalKey=profile?.goal||'General health';
+  const msgs={'Running & cardio':["Your legs are getting stronger! 🏃‍♀️","Every run builds your engine!","That's a runner's mindset!"],'Train for a sport':['Sport performance gains incoming! 🏸','Your game is levelling up!','On-court power is building!'],'Build muscle & strength':['Muscles are growing! 💪','Progressive overload working!','Stronger every session!'],'Lose weight & tone':['Your body is transforming! 🔥','Consistency is your superpower!','Every workout counts!'],'Yoga & flexibility':['Body and mind aligned! 🧘‍♀️','Flexibility gained today!','Flow state achieved!'],'General health':['Investing in yourself! ✨','Health is wealth!','Building lifelong habits!']};
+  const m=msgs[goalKey]||msgs['General health'];
+  setText('cel-emoji-web',['🎉','💪','🏆','⚡','🌟','🔥'][stats.sessions%6]);
+  setText('cel-sub-web',m[stats.sessions%m.length]);
+  setText('cel-streak-web',stats.streak);
+  setText('cel-sessions-web',stats.sessions);
+  document.getElementById('cel-overlay-web').classList.remove('hidden');
+  launchConfettiWeb();
+}
+function closeCelebration(){
+  document.getElementById('cel-overlay-web').classList.add('hidden');
+  stopConfettiWeb();
+}
+let cAnim=null,cParts=[];
+function launchConfettiWeb(){
+  const canvas=document.getElementById('confetti-canvas-web'); if(!canvas) return;
+  const ctx=canvas.getContext('2d');
+  canvas.width=window.innerWidth; canvas.height=window.innerHeight;
+  const cols=['#D4756A','#7A9E87','#C9955A','#8B8EC7','#FFFFFF'];
+  cParts=Array.from({length:100},()=>({x:Math.random()*canvas.width,y:Math.random()*canvas.height-canvas.height,w:Math.random()*8+4,h:Math.random()*4+2,color:cols[Math.floor(Math.random()*cols.length)],rot:Math.random()*360,vx:(Math.random()-.5)*3,vy:Math.random()*3+2,vr:(Math.random()-.5)*6}));
+  function draw(){ctx.clearRect(0,0,canvas.width,canvas.height);cParts.forEach(p=>{p.x+=p.vx;p.y+=p.vy;p.rot+=p.vr;if(p.y>canvas.height){p.y=-10;p.x=Math.random()*canvas.width;}ctx.save();ctx.translate(p.x,p.y);ctx.rotate(p.rot*Math.PI/180);ctx.fillStyle=p.color;ctx.fillRect(-p.w/2,-p.h/2,p.w,p.h);ctx.restore();});cAnim=requestAnimationFrame(draw);}
+  draw(); setTimeout(stopConfettiWeb,4000);
+}
+function stopConfettiWeb(){if(cAnim){cancelAnimationFrame(cAnim);cAnim=null;}}
+
+// ══════════════════════════════════════════
+// ACTIVITY LOG
+// ══════════════════════════════════════════
+function openActivityLog(){
+  logDraft={activityType:'Planned Workout',duration:'30',effort:3,note:''};
+  document.querySelectorAll('.act-btn-web').forEach((b,i)=>b.classList.toggle('selected',i===0));
+  document.querySelectorAll('.dur-btn-web').forEach(b=>b.classList.toggle('selected',b.textContent==='30m'));
+  document.querySelectorAll('.effort-btn-web').forEach((b,i)=>b.classList.toggle('selected',i===2));
+  const n=document.getElementById('log-note-web'); if(n) n.value='';
+  document.getElementById('activity-log-modal-web').classList.remove('hidden');
+}
+function selAct(btn,type){document.querySelectorAll('.act-btn-web').forEach(b=>b.classList.remove('selected'));btn.classList.add('selected');logDraft.activityType=type;}
+function selDur(btn,val){document.querySelectorAll('.dur-btn-web').forEach(b=>b.classList.remove('selected'));btn.classList.add('selected');logDraft.duration=val;}
+function selEffort(btn,val){document.querySelectorAll('.effort-btn-web').forEach(b=>b.classList.remove('selected'));btn.classList.add('selected');logDraft.effort=val;}
+function submitActivityLog(){
+  logDraft.note=document.getElementById('log-note-web')?.value||'';
+  if(!stats.activityLog) stats.activityLog=[];
+  stats.activityLog.push({date:new Date().toISOString(),type:logDraft.activityType,duration:logDraft.duration,effort:logDraft.effort,note:logDraft.note,cycleDay:getCycleDay(),phase:getPhaseByDay(getCycleDay()||9)?.name});
+  const today=new Date().toDateString();
+  if(stats.lastDate!==today) logSession();
+  saveUserData();
+  document.getElementById('activity-log-modal-web').classList.add('hidden');
+  const labs=['','easy','moderate','hard','very hard','all-out'];
+  const msg=`I completed a ${logDraft.duration}-minute ${logDraft.activityType} session. Effort: ${labs[logDraft.effort]}.${logDraft.note?' Notes: '+logDraft.note:''}`;
+  appendMsgWeb('user',msg); getAI(msg);
+  switchView('ai');
+  showToast('Activity logged! ✓');
+}
+
+// ══════════════════════════════════════════
+// STRAVA
+// ══════════════════════════════════════════
+const STRAVA_CLIENT_ID='YOUR_STRAVA_CLIENT_ID';
+const STRAVA_REDIRECT_URI=window.location.origin+'/app';
+let stravaConnected=false;
+
+function stravaConnect(){
+  if(STRAVA_CLIENT_ID==='YOUR_STRAVA_CLIENT_ID'){
+    showStravaInfoWeb(); return;
+  }
+  const url=`https://www.strava.com/oauth/authorize?client_id=${STRAVA_CLIENT_ID}&redirect_uri=${encodeURIComponent(STRAVA_REDIRECT_URI)}&response_type=code&scope=read,activity:read`;
+  window.location.href=url;
+}
+function showStravaInfoWeb(){
+  const m=document.createElement('div'); m.className='modal-overlay'; m.style.zIndex='600';
+  m.innerHTML=`<div class="modal-sheet-web"><div class="modal-handle-web"></div>
+    <div style="text-align:center;margin-bottom:16px;"><div style="font-size:40px;margin-bottom:8px;">🟠</div><div class="modal-title-web" style="text-align:center;">Connect Strava</div><div class="modal-sub-web" style="text-align:center;">Auto-sync runs, rides, and sport sessions directly to HERFORM.</div></div>
+    <div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:14px;">
+      ${[['1','Go to strava.com/settings/api','Create a free API app — 2 min'],['2','Copy your Client ID','A short number like 12345'],['3','Add to Vercel env vars','STRAVA_CLIENT_ID = your number'],['4','Redeploy','Strava button activates automatically']].map(([n,t,s])=>`<div style="display:flex;gap:12px;margin-bottom:12px;align-items:flex-start;"><div style="width:22px;height:22px;border-radius:50%;background:rgba(252,76,2,0.15);border:1px solid rgba(252,76,2,0.3);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#FC4C02;flex-shrink:0;">${n}</div><div><div style="font-size:13px;font-weight:600;color:var(--white);">${t}</div><div style="font-size:11px;color:var(--muted);">${s}</div></div></div>`).join('')}
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;">
+      <span style="font-size:12px;color:#FC4C02;background:rgba(252,76,2,0.08);border:1px solid rgba(252,76,2,0.2);padding:4px 10px;border-radius:20px;">✓ Free forever</span>
+      <span style="font-size:12px;color:#FC4C02;background:rgba(252,76,2,0.08);border:1px solid rgba(252,76,2,0.2);padding:4px 10px;border-radius:20px;">✓ All sports</span>
+      <span style="font-size:12px;color:#FC4C02;background:rgba(252,76,2,0.08);border:1px solid rgba(252,76,2,0.2);padding:4px 10px;border-radius:20px;">✓ Apple Watch</span>
+    </div>
+    <button class="modal-next-web" style="background:#FC4C02;" onclick="stravaPreview();this.closest('.modal-overlay').remove();">Preview Connected State</button>
+    <button class="modal-back-web" onclick="this.closest('.modal-overlay').remove()">Close</button>
+  </div>`;
+  document.body.appendChild(m);
+}
+function stravaPreview(){
+  document.getElementById('strava-sub-web').textContent='Last sync: just now';
+  document.getElementById('strava-btn-web').textContent='Connected ✓';
+  document.getElementById('strava-btn-web').style.cssText='padding:7px 14px;background:#FC4C02;border:none;color:white;font-family:Outfit,sans-serif;font-size:12px;font-weight:600;border-radius:7px;cursor:default;';
+  const acts=document.getElementById('strava-activities-web');
+  acts.style.display='block';
+  acts.innerHTML=`<div style="font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);margin-bottom:8px;">Recent Activities</div>
+    ${[['🏃‍♀️','Morning Run','5.2km · 28min'],['🚴‍♀️','Evening Ride','18km · 52min'],['🧘‍♀️','Yoga Session','45min']].map(([ic,name,meta])=>`
+    <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);">
+      <span style="font-size:18px;">${ic}</span>
+      <span style="font-size:13px;color:var(--off);flex:1;">${name}</span>
+      <span style="font-size:11px;color:var(--muted);">${meta}</span>
+      <span style="font-size:10px;font-weight:600;color:var(--sage);background:rgba(122,158,135,0.1);border:1px solid rgba(122,158,135,0.3);padding:2px 8px;border-radius:20px;">SYNCED</span>
+    </div>`).join('')}`;
+  showToast('Strava demo activated 🟠');
+}
+
+// ══════════════════════════════════════════
+// ONBOARDING MODAL
+// ══════════════════════════════════════════
+const MODAL_FLOWS={full:['goal','activity','level','cycle'],goal:['goal','activity','level']};
+
+function openModal(type){
+  draft={goal:profile?.goal||'',activity:profile?.activity||'',level:profile?.level||'',days:profile?.days||'3',cycleLen:String(cycleData?.estimatedLen||28)};
+  modalFlow=MODAL_FLOWS[type]||MODAL_FLOWS.full;
+  modalIndex=0;
+  updateModalDots();
+  showModalStep(modalFlow[0]);
+  prefillModal();
+  document.getElementById('onboarding-modal').classList.remove('hidden');
+}
+function prefillModal(){
+  if(draft.goal) document.querySelectorAll('#ms-goal-web .goal-btn-web').forEach(b=>{if(b.textContent.trim().includes(draft.goal.split('&')[0].trim())) b.classList.add('selected');});
+  if(draft.cycleLen) document.querySelectorAll('.cl-btn-web').forEach(b=>b.classList.toggle('selected',b.textContent===draft.cycleLen+'d'));
+  const lpi=document.getElementById('last-period-input-web');
+  if(lpi&&!lpi.value) lpi.value=cycleData?.lastPeriodDate||new Date().toISOString().split('T')[0];
+}
+function showModalStep(stepId){
+  document.querySelectorAll('.modal-step-web').forEach(s=>s.classList.remove('active'));
+  document.getElementById('ms-'+stepId+'-web')?.classList.add('active');
+}
+function updateModalDots(){
+  const dots=document.getElementById('modal-dots-web'); if(!dots) return;
+  dots.innerHTML=modalFlow.map((s,i)=>`<div class="mp-dot-web${i<=modalIndex?' done':''}"></div>`).join('');
+}
+function modalNext(){modalIndex++;if(modalIndex>=modalFlow.length){finishSetup();return;}updateModalDots();showModalStep(modalFlow[modalIndex]);}
+function modalBack(){if(modalIndex>0){modalIndex--;updateModalDots();showModalStep(modalFlow[modalIndex]);}}
+
+function pick(key,val,btn){
+  const step=btn.closest('.modal-step-web');
+  const cls=btn.classList[0];
+  step.querySelectorAll('.'+cls).forEach(b=>b.classList.remove('selected'));
+  btn.classList.add('selected');
+  draft[key]=val;
+}
+
+async function finishSetup(){
+  const lastDate=document.getElementById('last-period-input-web')?.value;
+  const name=currentUser?.user_metadata?.full_name||currentUser?.email?.split('@')[0]||'there';
+  profile={name,goal:draft.goal||'General health',activity:draft.activity||'',level:draft.level||'Intermediate',days:draft.days||'3'};
+  if(lastDate){
+    const newLen=parseInt(draft.cycleLen||'28');
+    if(!cycleData) cycleData={lastPeriodDate:lastDate,estimatedLen:newLen,history:[]};
+    else{cycleData.lastPeriodDate=lastDate;cycleData.estimatedLen=newLen;}
+  }
+  await saveUserData();
+  document.getElementById('onboarding-modal').classList.add('hidden');
+  updateAllUI();
+  const area=document.getElementById('chat-msgs-web');
+  if(area&&area.innerHTML==='') setTimeout(generateFirstPlan,400);
+}
+
+async function resetAll(){
+  if(!confirm('Reset your AI Coach profile and start fresh?')) return;
+  profile=null; cycleData=null; stats={sessions:0,streak:0,skipped:0,lastDate:''}; conversationHistory=[];
+  await saveUserData();
+  document.getElementById('chat-msgs-web').innerHTML='';
+  document.getElementById('plan-section-web').style.display='none';
+  document.getElementById('streak-row-web').style.display='none';
+  updateAllUI();
+  setTimeout(()=>openModal('full'),400);
+}
+
+// ══════════════════════════════════════════
+// NAVIGATION
+// ══════════════════════════════════════════
+function switchView(name){
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  document.getElementById('view-'+name)?.classList.add('active');
+  ['home','ai','cycle','profile'].forEach(n=>{
+    document.getElementById('ttab-'+n)?.classList.toggle('active',n===name);
+    document.getElementById('mtab-'+n)?.classList.toggle('active',n===name);
+  });
+  window.scrollTo(0,0);
+  if(name==='ai'&&profile&&document.getElementById('chat-msgs-web').innerHTML==='') setTimeout(generateFirstPlan,300);
+}
+
+// ══════════════════════════════════════════
+// UTILS
+// ══════════════════════════════════════════
+function setText(id,val){const el=document.getElementById(id);if(el)el.textContent=val;}
+function showToast(msg){
+  const t=document.createElement('div'); t.className='toast'; t.textContent=msg;
+  document.body.appendChild(t); setTimeout(()=>t.remove(),2500);
+}
+
+// ══════════════════════════════════════════
+// RESET PASSWORD
+// ══════════════════════════════════════════
+function openResetPassword(){
+  const modal = document.getElementById('reset-pw-modal');
+  if(!modal) return;
+  // Pre-fill with current user email
+  const emailInput = document.getElementById('reset-pw-email');
+  if(emailInput && currentUser?.email) emailInput.value = currentUser.email;
+  const msg = document.getElementById('reset-pw-msg');
+  if(msg){ msg.textContent=''; msg.className='auth-msg'; }
+  modal.classList.remove('hidden');
+}
+
+async function submitResetPassword(){
+  const email = document.getElementById('reset-pw-email')?.value.trim();
+  if(!email){ 
+    const msg=document.getElementById('reset-pw-msg');
+    msg.textContent='Please enter your email.';
+    msg.className='auth-msg error show';
+    return;
+  }
+  if(isLocal){
+    const msg=document.getElementById('reset-pw-msg');
+    msg.textContent='Reset emails only work on the live site, not locally.';
+    msg.className='auth-msg error show';
+    return;
+  }
+  const btn = document.querySelector('#reset-pw-modal .modal-next-web');
+  if(btn){ btn.disabled=true; btn.textContent='Sending…'; }
+  const{error}=await sb.auth.resetPasswordForEmail(email,{
+    redirectTo: window.location.origin+'/app'
+  });
+  if(btn){ btn.disabled=false; btn.textContent='Send Reset Link →'; }
+  const msg=document.getElementById('reset-pw-msg');
+  if(error){
+    msg.textContent=error.message;
+    msg.className='auth-msg error show';
+  } else {
+    msg.textContent='✓ Reset link sent! Check your email and click the link to set a new password.';
+    msg.className='auth-msg success show';
+    setTimeout(()=>document.getElementById('reset-pw-modal').classList.add('hidden'),3000);
+  }
+}
+
+// ══════════════════════════════════════════
+// INIT
+// ══════════════════════════════════════════
+initAuth();
+</script>
+</body>
+</html>
