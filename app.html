@@ -882,9 +882,9 @@ canvas#confetti-canvas{position:absolute;inset:0;width:100%;height:100%;pointer-
 // Replace with your actual Supabase project URL and anon key
 // Get these from: supabase.com → your project → Settings → API
 // ══════════════════════════════════════════
-const SUPABASE_URL = 'YOUR_SUPABASE_URL';
-const SUPABASE_ANON_KEY = 'YOUR_SUPABASE_ANON_KEY';
-const isLocal = window.location.hostname === 'localhost' || window.location.protocol === 'file:' || SUPABASE_URL === 'YOUR_SUPABASE_URL';
+const SUPABASE_URL = 'https://ojgladqhtugylhkxztup.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9qZ2xhZHFodHVneWxoa3h6dHVwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU4OTQ1NjksImV4cCI6MjA5MTQ3MDU2OX0.ogKdDgVduekCzlpf88UoT5D700g7nlFFp6d6ZrSmNrg';
+const isLocal = window.location.hostname === 'localhost' || window.location.protocol === 'file:';
 const sb = isLocal ? null : supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 // ══════════════════════════════════════════
