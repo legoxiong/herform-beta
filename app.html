@@ -836,7 +836,7 @@ canvas#confetti-canvas{position:absolute;inset:0;width:100%;height:100%;pointer-
 // ══════════════════════════════════════════
 const SUPABASE_URL = 'https://ojgladqhtugylhkxztup.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_tryuvSrRnfxlXxqNsGBG8w_DsHAgxUa';
-const isLocal = window.location.hostname === 'localhost' || window.location.protocol === 'file:' || SUPABASE_URL === 'https://ojgladqhtugylhkxztup.supabase.co';
+const isLocal = window.location.hostname === 'localhost' || window.location.protocol === 'file:';
 const sb = isLocal ? null : supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 // ══════════════════════════════════════════
