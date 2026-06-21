@@ -1879,10 +1879,24 @@ function launchApp(user){
   updateAllUI();
   // Load saved training plan
   if(stats?.trainingPlan && !trainingPlan){ trainingPlan = stats.trainingPlan; }
+
+  // ── Strava: restore saved token or handle OAuth callback ──────────────────
+  const _urlParams=new URLSearchParams(window.location.search);
+  const _stravaCode=_urlParams.get('code');
+  const _stravaScope=_urlParams.get('scope');
+  if(_stravaCode && _stravaScope){
+    // Strava OAuth callback — clean the URL immediately so a refresh doesn't re-trigger
+    history.replaceState({},'',window.location.pathname);
+    handleStravaCallback(_stravaCode);
+  } else {
+    const _saved=localStorage.getItem('strava-token');
+    if(_saved){ try{ stravaToken=JSON.parse(_saved); stravaSetConnected(stravaToken.athlete); }catch(e){ localStorage.removeItem('strava-token'); } }
+  }
+
   // Smart onboarding check:
   if(profile && cycleData){
-    // Returning user — show daily check-in first
-    setTimeout(()=>openCheckin(), 600);
+    // Returning user — show daily check-in first (skip if Strava is handling the callback)
+    if(!_stravaCode) setTimeout(()=>openCheckin(), 600);
   } else if(profile && !cycleData){
     setTimeout(()=>openModal('cycle'), 800);
   } else {
@@ -3052,49 +3066,164 @@ function submitActivityLog(){
 // ══════════════════════════════════════════
 // STRAVA
 // ══════════════════════════════════════════
-const STRAVA_CLIENT_ID='YOUR_STRAVA_CLIENT_ID';
+const STRAVA_API='/api/strava';
 const STRAVA_REDIRECT_URI=window.location.origin+'/app';
 let stravaConnected=false;
+let stravaToken=null; // { access_token, refresh_token, expires_at, athlete }
 
-function stravaConnect(){
-  if(STRAVA_CLIENT_ID==='YOUR_STRAVA_CLIENT_ID'){
-    showStravaInfoWeb(); return;
+async function stravaConnect(){
+  if(stravaConnected){ stravaDisconnect(); return; }
+  const btn=document.getElementById('strava-btn-web');
+  const origText=btn?btn.textContent:'Connect';
+  if(btn){ btn.textContent='Connecting...'; btn.disabled=true; }
+  try{
+    const res=await fetch(STRAVA_API,{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({action:'auth-url',redirectUri:STRAVA_REDIRECT_URI})});
+    const data=await res.json();
+    if(data.error==='not_configured'||!data.url){ showStravaInfoWeb(); if(btn){btn.textContent=origText;btn.disabled=false;} return; }
+    window.location.href=data.url;
+  }catch(e){
+    showToast('Could not reach server');
+    if(btn){btn.textContent=origText;btn.disabled=false;}
   }
-  const url=`https://www.strava.com/oauth/authorize?client_id=${STRAVA_CLIENT_ID}&redirect_uri=${encodeURIComponent(STRAVA_REDIRECT_URI)}&response_type=code&scope=read,activity:read`;
-  window.location.href=url;
 }
+
+async function handleStravaCallback(code){
+  const btn=document.getElementById('strava-btn-web');
+  if(btn){btn.textContent='Authorising...';btn.disabled=true;}
+  try{
+    const res=await fetch(STRAVA_API,{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({action:'exchange',code})});
+    const data=await res.json();
+    if(data.access_token){
+      stravaToken=data;
+      localStorage.setItem('strava-token',JSON.stringify(stravaToken));
+      stravaSetConnected(data.athlete);
+      showToast('Strava connected! 🟠');
+      switchView('activities');
+    }else{
+      showToast('Strava connection failed'+(data.message?': '+data.message:''));
+      if(btn){btn.textContent='Connect';btn.disabled=false;}
+    }
+  }catch(e){
+    showToast('Strava connection failed');
+    if(btn){btn.textContent='Connect';btn.disabled=false;}
+  }
+}
+
+async function stravaGetValidToken(){
+  if(!stravaToken) return null;
+  const now=Math.floor(Date.now()/1000);
+  // Token still valid (with 60-second buffer)
+  if(stravaToken.expires_at>now+60) return stravaToken.access_token;
+  // Token expired — refresh
+  try{
+    const res=await fetch(STRAVA_API,{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({action:'refresh',refresh_token:stravaToken.refresh_token})});
+    const data=await res.json();
+    if(data.access_token){
+      stravaToken={...stravaToken,...data};
+      localStorage.setItem('strava-token',JSON.stringify(stravaToken));
+      return stravaToken.access_token;
+    }
+  }catch(e){}
+  // Refresh failed — token unusable, force re-auth
+  stravaDisconnect();
+  return null;
+}
+
+async function stravaFetchActivities(){
+  const token=await stravaGetValidToken();
+  if(!token) return;
+  try{
+    const res=await fetch(STRAVA_API,{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({action:'activities',access_token:token})});
+    const data=await res.json();
+    if(data.activities) renderStravaActivities(data.activities);
+    if(res.status===401){ stravaDisconnect(); showToast('Strava session expired — please reconnect'); }
+  }catch(e){}
+}
+
+function renderStravaActivities(activities){
+  const acts=document.getElementById('strava-activities-web');
+  if(!acts) return;
+  acts.style.display='block';
+  if(!activities.length){
+    acts.innerHTML='<div style="padding:8px 0;font-size:12px;color:var(--muted);">No activities yet — go crush a workout! 💪</div>';
+    return;
+  }
+  acts.innerHTML=`<div style="font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);margin-bottom:8px;">Recent Activities</div>
+    ${activities.map(a=>{
+      const dist=a.distance>0?`${(a.distance/1000).toFixed(1)}km · `:'';
+      const mins=a.moving_time>0?`${Math.round(a.moving_time/60)}min`:'';
+      return `<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);">
+        <span style="font-size:18px;">${stravaTypeIcon(a.type)}</span>
+        <span style="font-size:13px;color:var(--off);flex:1;">${a.name}</span>
+        <span style="font-size:11px;color:var(--muted);">${dist}${mins}</span>
+        <span style="font-size:10px;font-weight:600;color:var(--sage);background:rgba(122,158,135,0.1);border:1px solid rgba(122,158,135,0.3);padding:2px 8px;border-radius:20px;">SYNCED</span>
+      </div>`;
+    }).join('')}`;
+}
+
+function stravaTypeIcon(type){
+  const map={Run:'🏃‍♀️',Ride:'🚴‍♀️',Swim:'🏊‍♀️',Walk:'🚶‍♀️',Hike:'🥾',Yoga:'🧘‍♀️',
+    WeightTraining:'🏋️‍♀️',Workout:'💪',EllipticalTrainer:'🌀',Pilates:'🧘‍♀️',VirtualRide:'🚴‍♀️'};
+  return map[type]||'⚡';
+}
+
+function stravaSetConnected(athlete){
+  stravaConnected=true;
+  const name=athlete?.firstname?(`${athlete.firstname} ${athlete.lastname||''}`).trim():'Strava';
+  const sub=document.getElementById('strava-sub-web');
+  if(sub) sub.textContent=`Connected as ${name}`;
+  const btn=document.getElementById('strava-btn-web');
+  if(btn){
+    btn.textContent='Connected ✓';
+    btn.disabled=false;
+    btn.style.cssText='padding:7px 14px;background:#FC4C02;border:none;color:white;font-family:Outfit,sans-serif;font-size:12px;font-weight:600;border-radius:7px;cursor:pointer;';
+  }
+  stravaFetchActivities();
+}
+
+function stravaDisconnect(){
+  stravaToken=null; stravaConnected=false;
+  localStorage.removeItem('strava-token');
+  const sub=document.getElementById('strava-sub-web');
+  if(sub) sub.textContent='Auto-sync your activities';
+  const btn=document.getElementById('strava-btn-web');
+  if(btn){ btn.textContent='Connect'; btn.disabled=false; btn.style.cssText=''; }
+  const acts=document.getElementById('strava-activities-web');
+  if(acts){ acts.style.display='none'; acts.innerHTML=''; }
+  showToast('Strava disconnected');
+}
+
 function showStravaInfoWeb(){
   const m=document.createElement('div'); m.className='modal-overlay'; m.style.zIndex='600';
   m.innerHTML=`<div class="modal-sheet-web"><div class="modal-handle-web"></div>
-    <div style="text-align:center;margin-bottom:16px;"><div style="font-size:40px;margin-bottom:8px;">🟠</div><div class="modal-title-web" style="text-align:center;">Connect Strava</div><div class="modal-sub-web" style="text-align:center;">Auto-sync runs, rides, and sport sessions directly to HERFORM.</div></div>
+    <div style="text-align:center;margin-bottom:16px;">
+      <div style="width:44px;height:44px;border-radius:50%;background:#FC4C02;display:flex;align-items:center;justify-content:center;margin:0 auto 10px;"><svg width="22" height="22" viewBox="0 0 22 22" fill="none" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 11H4.5L7 6L11 17L14 10L17 12.5H21"/></svg></div>
+      <div class="modal-title-web" style="text-align:center;">Set Up Strava</div>
+      <div class="modal-sub-web" style="text-align:center;">Ask your developer to add these two Vercel environment variables to unlock Strava sync.</div>
+    </div>
     <div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:14px;">
-      ${[['1','Go to strava.com/settings/api','Create a free API app — 2 min'],['2','Copy your Client ID','A short number like 12345'],['3','Add to Vercel env vars','STRAVA_CLIENT_ID = your number'],['4','Redeploy','Strava button activates automatically']].map(([n,t,s])=>`<div style="display:flex;gap:12px;margin-bottom:12px;align-items:flex-start;"><div style="width:22px;height:22px;border-radius:50%;background:rgba(252,76,2,0.15);border:1px solid rgba(252,76,2,0.3);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#FC4C02;flex-shrink:0;">${n}</div><div><div style="font-size:13px;font-weight:600;color:var(--white);">${t}</div><div style="font-size:11px;color:var(--muted);">${s}</div></div></div>`).join('')}
+      ${[
+        ['1','Go to strava.com/settings/api','Create a free API application — takes 2 minutes'],
+        ['2','Copy Client ID + Client Secret','Two values from your Strava API page'],
+        ['3','Add to Vercel env vars','STRAVA_CLIENT_ID and STRAVA_CLIENT_SECRET'],
+        ['4','Redeploy','The Connect button activates automatically']
+      ].map(([n,t,s])=>`<div style="display:flex;gap:12px;margin-bottom:12px;align-items:flex-start;">
+        <div style="width:22px;height:22px;border-radius:50%;background:rgba(252,76,2,0.15);border:1px solid rgba(252,76,2,0.3);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#FC4C02;flex-shrink:0;">${n}</div>
+        <div><div style="font-size:13px;font-weight:600;color:var(--white);">${t}</div><div style="font-size:11px;color:var(--muted);">${s}</div></div>
+      </div>`).join('')}
     </div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;">
       <span style="font-size:12px;color:#FC4C02;background:rgba(252,76,2,0.08);border:1px solid rgba(252,76,2,0.2);padding:4px 10px;border-radius:20px;">✓ Free forever</span>
       <span style="font-size:12px;color:#FC4C02;background:rgba(252,76,2,0.08);border:1px solid rgba(252,76,2,0.2);padding:4px 10px;border-radius:20px;">✓ All sports</span>
       <span style="font-size:12px;color:#FC4C02;background:rgba(252,76,2,0.08);border:1px solid rgba(252,76,2,0.2);padding:4px 10px;border-radius:20px;">✓ Apple Watch</span>
     </div>
-    <button class="modal-next-web" style="background:#FC4C02;" onclick="stravaPreview();this.closest('.modal-overlay').remove();">Preview Connected State</button>
-    <button class="modal-back-web" onclick="this.closest('.modal-overlay').remove()">Close</button>
+    <button class="modal-back-web" onclick="this.closest('.modal-overlay').remove()">Got it</button>
   </div>`;
   document.body.appendChild(m);
-}
-function stravaPreview(){
-  document.getElementById('strava-sub-web').textContent='Last sync: just now';
-  document.getElementById('strava-btn-web').textContent='Connected ✓';
-  document.getElementById('strava-btn-web').style.cssText='padding:7px 14px;background:#FC4C02;border:none;color:white;font-family:Outfit,sans-serif;font-size:12px;font-weight:600;border-radius:7px;cursor:default;';
-  const acts=document.getElementById('strava-activities-web');
-  acts.style.display='block';
-  acts.innerHTML=`<div style="font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);margin-bottom:8px;">Recent Activities</div>
-    ${[['🏃‍♀️','Morning Run','5.2km · 28min'],['🚴‍♀️','Evening Ride','18km · 52min'],['🧘‍♀️','Yoga Session','45min']].map(([ic,name,meta])=>`
-    <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);">
-      <span style="font-size:18px;">${ic}</span>
-      <span style="font-size:13px;color:var(--off);flex:1;">${name}</span>
-      <span style="font-size:11px;color:var(--muted);">${meta}</span>
-      <span style="font-size:10px;font-weight:600;color:var(--sage);background:rgba(122,158,135,0.1);border:1px solid rgba(122,158,135,0.3);padding:2px 8px;border-radius:20px;">SYNCED</span>
-    </div>`).join('')}`;
-  showToast('Strava demo activated 🟠');
 }
 
 // ══════════════════════════════════════════
