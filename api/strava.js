@@ -3,8 +3,9 @@
 // Runtime: Vercel Edge (same pattern as api/coach.js)
 //
 // Env vars required — set in Vercel dashboard → Settings → Environment Variables:
-//   STRAVA_CLIENT_ID     — from strava.com/settings/api (safe to be public, but keep it here)
-//   STRAVA_CLIENT_SECRET — from strava.com/settings/api (MUST stay server-side)
+//   STRAVA_CLIENT_ID     — 259986
+//   STRAVA_CLIENT_SECRET — 67e8e2f5257541ba5e9eb801dc5a8c276a2ce722
+
 //
 // Actions (POST body: { action, ...params }):
 //   auth-url    → returns the Strava OAuth redirect URL
