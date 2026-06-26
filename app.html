@@ -1127,19 +1127,18 @@ canvas#confetti-canvas{position:absolute;inset:0;width:100%;height:100%;pointer-
         <!-- Connect integrations -->
         <div class="well-section">
           <div class="well-section-title">Connect Your Data</div>
-          <!-- Strava -->
+          <!-- Apple Watch -->
           <div class="strava-card-web" style="margin-bottom:10px;">
             <div class="strava-head">
               <div class="strava-logo-row">
-                <div class="strava-logo-dot"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 8H3.5L5.5 4L8 12L10 7L12 9H15"/></svg></div>
+                <div class="strava-logo-dot" style="background:#1C1C1E;border:1px solid #3A3A3C;"><svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="white" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="1" width="9" height="13" rx="2.5"/><circle cx="7.5" cy="7.5" r="2"/><line x1="3" y1="4.5" x2="12" y2="4.5"/><line x1="3" y1="10.5" x2="12" y2="10.5"/></svg></div>
                 <div>
-                  <div class="strava-name-web">Strava</div>
-                  <div class="strava-sub-web" id="strava-sub-web">Auto-sync your activities</div>
+                  <div class="strava-name-web">Apple Watch</div>
+                  <div class="strava-sub-web">Heart rate, workouts & recovery</div>
                 </div>
               </div>
-              <button class="strava-connect-btn" id="strava-btn-web" onclick="stravaConnect()">Connect</button>
+              <button class="strava-connect-btn" style="background:rgba(255,255,255,0.06);border-color:rgba(255,255,255,0.15);color:var(--off);" onclick="appleWatchInfo()">Set Up</button>
             </div>
-            <div id="strava-activities-web" style="display:none;padding:0 16px 14px;"></div>
           </div>
           <!-- Apple Health placeholder -->
           <div class="act-integration-card">
@@ -1883,23 +1882,9 @@ function launchApp(user){
   // Load saved training plan
   if(stats?.trainingPlan && !trainingPlan){ trainingPlan = stats.trainingPlan; }
 
-  // ── Strava: restore saved token or handle OAuth callback ──────────────────
-  const _urlParams=new URLSearchParams(window.location.search);
-  const _stravaCode=_urlParams.get('code');
-  const _stravaScope=_urlParams.get('scope');
-  if(_stravaCode && _stravaScope){
-    // Strava OAuth callback — clean the URL immediately so a refresh doesn't re-trigger
-    history.replaceState({},'',window.location.pathname);
-    handleStravaCallback(_stravaCode);
-  } else {
-    const _saved=localStorage.getItem('strava-token');
-    if(_saved){ try{ stravaToken=JSON.parse(_saved); stravaSetConnected(stravaToken.athlete); }catch(e){ localStorage.removeItem('strava-token'); } }
-  }
-
   // Smart onboarding check:
   if(profile && cycleData){
-    // Returning user — show daily check-in first (skip if Strava is handling the callback)
-    if(!_stravaCode) setTimeout(()=>openCheckin(), 600);
+    setTimeout(()=>openCheckin(), 600);
   } else if(profile && !cycleData){
     setTimeout(()=>openModal('cycle'), 800);
   } else {
@@ -3075,165 +3060,33 @@ function submitActivityLog(){
 }
 
 // ══════════════════════════════════════════
-// STRAVA
+// APPLE WATCH
 // ══════════════════════════════════════════
-const STRAVA_API='/api/strava';
-const STRAVA_REDIRECT_URI=window.location.origin+'/app';
-let stravaConnected=false;
-let stravaToken=null; // { access_token, refresh_token, expires_at, athlete }
-
-async function stravaConnect(){
-  if(stravaConnected){ stravaDisconnect(); return; }
-  const btn=document.getElementById('strava-btn-web');
-  const origText=btn?btn.textContent:'Connect';
-  if(btn){ btn.textContent='Connecting...'; btn.disabled=true; }
-  try{
-    const res=await fetch(STRAVA_API,{method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({action:'auth-url',redirectUri:STRAVA_REDIRECT_URI})});
-    const data=await res.json();
-    if(data.error==='not_configured'||!data.url){ showStravaInfoWeb(); if(btn){btn.textContent=origText;btn.disabled=false;} return; }
-    window.location.href=data.url;
-  }catch(e){
-    showToast('Could not reach server');
-    if(btn){btn.textContent=origText;btn.disabled=false;}
-  }
-}
-
-async function handleStravaCallback(code){
-  const btn=document.getElementById('strava-btn-web');
-  if(btn){btn.textContent='Authorising...';btn.disabled=true;}
-  try{
-    const res=await fetch(STRAVA_API,{method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({action:'exchange',code})});
-    const data=await res.json();
-    if(data.access_token){
-      stravaToken=data;
-      localStorage.setItem('strava-token',JSON.stringify(stravaToken));
-      stravaSetConnected(data.athlete);
-      showToast('Strava connected! 🟠');
-      switchView('activities');
-    }else{
-      showToast('Strava connection failed'+(data.message?': '+data.message:''));
-      if(btn){btn.textContent='Connect';btn.disabled=false;}
-    }
-  }catch(e){
-    showToast('Strava connection failed');
-    if(btn){btn.textContent='Connect';btn.disabled=false;}
-  }
-}
-
-async function stravaGetValidToken(){
-  if(!stravaToken) return null;
-  const now=Math.floor(Date.now()/1000);
-  // Token still valid (with 60-second buffer)
-  if(stravaToken.expires_at>now+60) return stravaToken.access_token;
-  // Token expired — refresh
-  try{
-    const res=await fetch(STRAVA_API,{method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({action:'refresh',refresh_token:stravaToken.refresh_token})});
-    const data=await res.json();
-    if(data.access_token){
-      stravaToken={...stravaToken,...data};
-      localStorage.setItem('strava-token',JSON.stringify(stravaToken));
-      return stravaToken.access_token;
-    }
-  }catch(e){}
-  // Refresh failed — token unusable, force re-auth
-  stravaDisconnect();
-  return null;
-}
-
-async function stravaFetchActivities(){
-  const token=await stravaGetValidToken();
-  if(!token) return;
-  try{
-    const res=await fetch(STRAVA_API,{method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({action:'activities',access_token:token})});
-    const data=await res.json();
-    if(data.activities) renderStravaActivities(data.activities);
-    if(res.status===401){ stravaDisconnect(); showToast('Strava session expired — please reconnect'); }
-  }catch(e){}
-}
-
-function renderStravaActivities(activities){
-  const acts=document.getElementById('strava-activities-web');
-  if(!acts) return;
-  acts.style.display='block';
-  if(!activities.length){
-    acts.innerHTML='<div style="padding:8px 0;font-size:12px;color:var(--muted);">No activities yet — go crush a workout! 💪</div>';
-    return;
-  }
-  acts.innerHTML=`<div style="font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);margin-bottom:8px;">Recent Activities</div>
-    ${activities.map(a=>{
-      const dist=a.distance>0?`${(a.distance/1000).toFixed(1)}km · `:'';
-      const mins=a.moving_time>0?`${Math.round(a.moving_time/60)}min`:'';
-      return `<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);">
-        <span style="font-size:18px;">${stravaTypeIcon(a.type)}</span>
-        <span style="font-size:13px;color:var(--off);flex:1;">${a.name}</span>
-        <span style="font-size:11px;color:var(--muted);">${dist}${mins}</span>
-        <span style="font-size:10px;font-weight:600;color:var(--sage);background:rgba(122,158,135,0.1);border:1px solid rgba(122,158,135,0.3);padding:2px 8px;border-radius:20px;">SYNCED</span>
-      </div>`;
-    }).join('')}`;
-}
-
-function stravaTypeIcon(type){
-  const map={Run:'🏃‍♀️',Ride:'🚴‍♀️',Swim:'🏊‍♀️',Walk:'🚶‍♀️',Hike:'🥾',Yoga:'🧘‍♀️',
-    WeightTraining:'🏋️‍♀️',Workout:'💪',EllipticalTrainer:'🌀',Pilates:'🧘‍♀️',VirtualRide:'🚴‍♀️'};
-  return map[type]||'⚡';
-}
-
-function stravaSetConnected(athlete){
-  stravaConnected=true;
-  const name=athlete?.firstname?(`${athlete.firstname} ${athlete.lastname||''}`).trim():'Strava';
-  const sub=document.getElementById('strava-sub-web');
-  if(sub) sub.textContent=`Connected as ${name}`;
-  const btn=document.getElementById('strava-btn-web');
-  if(btn){
-    btn.textContent='Connected ✓';
-    btn.disabled=false;
-    btn.style.cssText='padding:7px 14px;background:#FC4C02;border:none;color:white;font-family:Outfit,sans-serif;font-size:12px;font-weight:600;border-radius:7px;cursor:pointer;';
-  }
-  stravaFetchActivities();
-}
-
-function stravaDisconnect(){
-  stravaToken=null; stravaConnected=false;
-  localStorage.removeItem('strava-token');
-  const sub=document.getElementById('strava-sub-web');
-  if(sub) sub.textContent='Auto-sync your activities';
-  const btn=document.getElementById('strava-btn-web');
-  if(btn){ btn.textContent='Connect'; btn.disabled=false; btn.style.cssText=''; }
-  const acts=document.getElementById('strava-activities-web');
-  if(acts){ acts.style.display='none'; acts.innerHTML=''; }
-  showToast('Strava disconnected');
-}
-
-function showStravaInfoWeb(){
+function appleWatchInfo(){
   const m=document.createElement('div'); m.className='modal-overlay'; m.style.zIndex='600';
   m.innerHTML=`<div class="modal-sheet-web"><div class="modal-handle-web"></div>
     <div style="text-align:center;margin-bottom:16px;">
-      <div style="width:44px;height:44px;border-radius:50%;background:#FC4C02;display:flex;align-items:center;justify-content:center;margin:0 auto 10px;"><svg width="22" height="22" viewBox="0 0 22 22" fill="none" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 11H4.5L7 6L11 17L14 10L17 12.5H21"/></svg></div>
-      <div class="modal-title-web" style="text-align:center;">Set Up Strava</div>
-      <div class="modal-sub-web" style="text-align:center;">Ask your developer to add these two Vercel environment variables to unlock Strava sync.</div>
+      <div style="width:44px;height:44px;border-radius:14px;background:#1C1C1E;border:1px solid #3A3A3C;display:flex;align-items:center;justify-content:center;margin:0 auto 10px;"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="2" width="12" height="20" rx="3.5"/><circle cx="12" cy="12" r="3"/><line x1="6" y1="8" x2="18" y2="8"/><line x1="6" y1="16" x2="18" y2="16"/></svg></div>
+      <div class="modal-title-web" style="text-align:center;">Apple Watch</div>
+      <div class="modal-sub-web" style="text-align:center;">Sync your workouts, heart rate zones, and recovery data directly from your Apple Watch.</div>
     </div>
     <div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:14px;">
       ${[
-        ['1','Go to strava.com/settings/api','Create a free API application — takes 2 minutes'],
-        ['2','Copy Client ID + Client Secret','Two values from your Strava API page'],
-        ['3','Add to Vercel env vars','STRAVA_CLIENT_ID and STRAVA_CLIENT_SECRET'],
-        ['4','Redeploy','The Connect button activates automatically']
-      ].map(([n,t,s])=>`<div style="display:flex;gap:12px;margin-bottom:12px;align-items:flex-start;">
-        <div style="width:22px;height:22px;border-radius:50%;background:rgba(252,76,2,0.15);border:1px solid rgba(252,76,2,0.3);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#FC4C02;flex-shrink:0;">${n}</div>
-        <div><div style="font-size:13px;font-weight:600;color:var(--white);">${t}</div><div style="font-size:11px;color:var(--muted);">${s}</div></div>
+        ['Heart Rate Zones','Track effort and recovery in real-time'],
+        ['Workout Detection','Auto-log your sessions by type'],
+        ['HRV & Recovery','Understand when to push and when to rest'],
+        ['Sleep Tracking','Align training load with sleep quality']
+      ].map(([t,s])=>`<div style="display:flex;gap:12px;margin-bottom:12px;align-items:flex-start;">
+        <div style="width:6px;height:6px;border-radius:50%;background:var(--accent);margin-top:5px;flex-shrink:0;"></div>
+        <div><div style="font-size:13px;font-weight:600;color:var(--off);">${t}</div><div style="font-size:12px;color:var(--muted);margin-top:2px;">${s}</div></div>
       </div>`).join('')}
     </div>
-    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;">
-      <span style="font-size:12px;color:#FC4C02;background:rgba(252,76,2,0.08);border:1px solid rgba(252,76,2,0.2);padding:4px 10px;border-radius:20px;">✓ Free forever</span>
-      <span style="font-size:12px;color:#FC4C02;background:rgba(252,76,2,0.08);border:1px solid rgba(252,76,2,0.2);padding:4px 10px;border-radius:20px;">✓ All sports</span>
-      <span style="font-size:12px;color:#FC4C02;background:rgba(252,76,2,0.08);border:1px solid rgba(252,76,2,0.2);padding:4px 10px;border-radius:20px;">✓ Apple Watch</span>
+    <div style="background:rgba(122,158,135,0.08);border:1px solid rgba(122,158,135,0.2);border-radius:10px;padding:12px 14px;margin-bottom:16px;font-size:13px;color:var(--muted);line-height:1.5;">
+      Apple Watch integration is available on the <strong style="color:var(--off);">HERFORM iOS app</strong> — coming soon to the App Store.
     </div>
-    <button class="modal-back-web" onclick="this.closest('.modal-overlay').remove()">Got it</button>
+    <button onclick="this.closest('.modal-overlay').remove()" style="width:100%;padding:13px;background:var(--accent);color:white;font-family:'Outfit',sans-serif;font-size:14px;font-weight:600;border:none;border-radius:10px;cursor:pointer;">Got It</button>
   </div>`;
+  m.onclick=e=>{if(e.target===m)m.remove();};
   document.body.appendChild(m);
 }
 
@@ -3245,6 +3098,11 @@ let checkinState = { mood:'', energy:'', days:0, adjustedWorkout:null };
 function openCheckin(){
   const overlay = document.getElementById('checkin-overlay');
   if(!overlay){ generateFirstPlan(); return; }
+  const today=new Date().toDateString();
+  if(localStorage.getItem('hf3_last_checkin')===today){
+    if(document.getElementById('chat-msgs-web').innerHTML==='') setTimeout(generateFirstPlan,400);
+    return;
+  }
   const hour = new Date().getHours();
   const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
   const firstName = (profile?.name || currentUser?.user_metadata?.full_name || '').split(' ')[0];
@@ -3493,6 +3351,7 @@ function checkinFinish(action){
     if(document.getElementById('chat-msgs-web').innerHTML==='') setTimeout(generateFirstPlan, 400);
   }
   updateAllUI();
+  localStorage.setItem('hf3_last_checkin', new Date().toDateString());
 }
 
 function closeCheckin(){
