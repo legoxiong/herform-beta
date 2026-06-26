@@ -2938,7 +2938,7 @@ async function getAI(msg){
   conversationHistory.push({role:'user',content:msg});
   try{
     let reply;
-    if(isLocal){
+    if(window.location.hostname==='localhost'||window.location.protocol==='file:'){
       await new Promise(r=>setTimeout(r,800+Math.random()*500));
       const cycleDay=getCycleDay();
       const phase=getPhaseByDay(cycleDay||9);
@@ -4038,7 +4038,7 @@ Include exactly ${profile.days||'3'} training days per week. Weeks 1-2: Foundati
 
   try {
     let planData;
-    if(isLocal){
+    if(window.location.hostname==='localhost'||window.location.protocol==='file:'){
       const dayTemplates = {
         'Build strength': [
           {w:'Upper Body Push — Chest & Shoulders',desc:'Bench press, overhead press, push-ups and lateral raises. Focus on controlled reps and feeling the muscle.'},
