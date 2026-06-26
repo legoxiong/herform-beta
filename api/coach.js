@@ -23,7 +23,7 @@ function anthropicHeaders() {
   return {
     'Content-Type': 'application/json',
     'x-api-key': process.env.ANTHROPIC_API_KEY,
-    'anthropic-version': '2025-01-01',
+    'anthropic-version': '2023-06-01',
   };
 }
 
