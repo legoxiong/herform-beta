@@ -2964,7 +2964,7 @@ async function getAI(msg){
     saveUserData();
   }catch(e){
     removeTypingWeb();
-    appendMsgWeb('ai',isLocal?'⚡ Demo mode: deploy to Vercel for live AI responses.':'⚠️ Could not reach AI. Check your Vercel API and ANTHROPIC_API_KEY.');
+    appendMsgWeb('ai',(window.location.hostname==='localhost'||window.location.protocol==='file:')?'⚡ Demo mode: deploy to Vercel for live AI responses.':'⚠️ Could not reach AI. Check your Vercel API and ANTHROPIC_API_KEY.');
   }
 }
 
