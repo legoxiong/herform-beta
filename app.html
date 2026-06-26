@@ -1780,9 +1780,10 @@ async function signIn(){
   const btn=document.querySelector('#view-signin .auth-btn');
   btn.disabled=true; btn.textContent='Signing in…';
   if(isLocal){
-    // Demo mode — skip Supabase
     await loadFromLocalStorage();
-    launchApp({email,user_metadata:{full_name:'Demo User'}});
+    const savedName=profile?.name||email.split('@')[0]||'User';
+    localStorage.setItem('hf3_session',JSON.stringify({email,name:savedName,ts:Date.now()}));
+    launchApp({email,user_metadata:{full_name:savedName}});
     return;
   }
   const{data,error}=await sb.auth.signInWithPassword({email,password:pw});
@@ -1805,6 +1806,7 @@ async function signUp(){
   btn.disabled=true; btn.textContent='Creating account…';
   if(isLocal){
     await loadFromLocalStorage();
+    localStorage.setItem('hf3_session',JSON.stringify({email,name,ts:Date.now()}));
     launchApp({email,user_metadata:{full_name:name}});
     return;
   }
@@ -1847,6 +1849,7 @@ async function sendMagicLink(src='signin'){
 
 async function signOut(){
   if(!isLocal) await sb.auth.signOut();
+  localStorage.removeItem('hf3_session');
   currentUser=null; profile=null; cycleData=null;
   stats={sessions:0,streak:0,skipped:0,lastDate:''};
   conversationHistory=[]; userTier='free';
@@ -2255,6 +2258,14 @@ async function initAuth(){
   loadRememberedEmail(); // Pre-fill email if remembered
   if(isLocal){
     loadFromLocalStorage();
+    const _sess=localStorage.getItem('hf3_session');
+    if(_sess){try{
+      const s=JSON.parse(_sess);
+      if(Date.now()-s.ts < 7*24*60*60*1000){
+        launchApp({email:s.email,user_metadata:{full_name:s.name}});
+        return;
+      } else { localStorage.removeItem('hf3_session'); }
+    }catch(e){ localStorage.removeItem('hf3_session'); }}
     showView('view-signin');
     return;
   }
